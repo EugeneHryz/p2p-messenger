@@ -1,0 +1,4 @@
+rootProject.name = "messenger"
+include ':app'
+include ':protocol-api'
+include ':protocol-core'

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <dimen name="huge_text">32sp</dimen>
+    <dimen name="fab_margin">15dp</dimen>
+
+    <dimen name="activity_horizontal_margin">15dp</dimen>
+    <dimen name="activity_vertical_margin">15dp</dimen>
+
+    <dimen name="text_edit_padding">12dp</dimen>
+
+    <dimen name="small_margin">6dp</dimen>
+    <dimen name="button_padding">12dp</dimen>
+</resources>

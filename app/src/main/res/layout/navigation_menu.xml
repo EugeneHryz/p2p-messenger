@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	xmlns:tools="http://schemas.android.com/tools"
+	android:layout_width="wrap_content"
+	android:layout_height="match_parent"
+	android:background="@color/window_background_color"
+	android:fillViewport="true"
+	android:orientation="vertical">
+
+	<androidx.constraintlayout.widget.ConstraintLayout
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content">
+
+		<com.google.android.material.navigation.NavigationView
+			android:id="@+id/navigation"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:background="@color/window_background_color"
+			app:elevation="0dp"
+			app:itemIconTint="?attr/colorControlNormal"
+			app:itemTextColor="?android:textColorPrimary"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="parent"
+			app:menu="@menu/drawer_main_menu"
+			app:headerLayout="@layout/navigation_header"/>
+
+<!--		<View-->
+<!--			android:id="@+id/spacer"-->
+<!--			android:layout_width="0dp"-->
+<!--			android:layout_height="0dp"-->
+<!--			app:layout_constraintBottom_toBottomOf="parent"-->
+<!--			app:layout_constraintStart_toStartOf="parent"-->
+<!--			app:layout_constraintTop_toBottomOf="@+id/navigation"-->
+<!--			app:layout_constraintVertical_weight="1" />-->
+
+	</androidx.constraintlayout.widget.ConstraintLayout>
+
+</ScrollView>

@@ -1,0 +1,30 @@
+<resources>
+    <string name="app_name">WaveCrest</string>
+    <string name="title_activity_main">MainActivity</string>
+
+    <string name="enter_nickname_hint">Enter your nickname</string>
+    <string name="next_btn">Next</string>
+    <string name="sign_in_btn">Sign in</string>
+    <string name="nickname_too_short">Nickname must be at least 3 characters long</string>
+    <string name="set_password_hint">Enter your password</string>
+    <string name="confirm_password_hint">Confirm your password</string>
+
+    <string name="password_too_short">Password must be at least 8 characters long</string>
+    <string name="passwords_not_equal">Passwords do not match</string>
+    <string name="password_too_weak">Password is too weak</string>
+
+    <string name="very_weak_password">Very weak password</string>
+    <string name="weak_password">Weak password</string>
+    <string name="medium_password">Medium strength password</string>
+    <string name="strong_password">Strong password</string>
+    <string name="very_strong_password">Very strong password</string>
+    <string name="sign_in_failed">Failed to sign in</string>
+
+    <string name="menu_contact_list">Contacts</string>
+    <string name="menu_log_out">Log out</string>
+    <string name="menu_settings">Settings</string>
+
+    <string name="open_drawer_desc">Open navigation drawer</string>
+    <string name="close_drawer_desc">Close navigation drawer</string>
+
+</resources>

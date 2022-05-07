@@ -1,0 +1,36 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+allprojects {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        google()
+        maven { url "https://jitpack.io" }
+    }
+}
+
+buildscript {
+    repositories {
+        mavenLocal()
+        google()
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.0.3'
+        classpath 'ru.vyarus:gradle-animalsniffer-plugin:1.5.3'
+        classpath files('libs/gradle-witness.jar')
+    }
+    ext {
+        dagger_version = "2.41"
+        apache_commons_lang_version = "3.12.0"
+        // okhttp 3.12.x is supported until end of 2021, newer versions need minSdk 21
+        okhttp_version = "3.12.13"
+        jackson_version = "2.13.0"
+//        tor_version = "0.4.5.12-2"
+        obfs4proxy_version = "0.0.12"
+        junit_version = "4.13.2"
+        jmock_version = '2.12.0'
+    }
+}

@@ -1,0 +1,18 @@
+apply plugin: 'java-library'
+
+sourceCompatibility = 11
+targetCompatibility = 11
+
+dependencies {
+    api project(':protocol-api')
+
+    implementation 'at.favre.lib:hkdf:1.1.0'
+    implementation "org.apache.commons:commons-lang3:$apache_commons_lang_version"
+
+    implementation "com.google.dagger:dagger:$dagger_version"
+    annotationProcessor "com.google.dagger:dagger-compiler:$dagger_version"
+
+    implementation 'com.h2database:h2:2.1.210'
+
+    testImplementation "junit:junit:$junit_version"
+}
