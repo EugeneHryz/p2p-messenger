@@ -3,11 +3,14 @@ package com.eugene.wc.protocol.data;
 import static com.eugene.wc.protocol.api.data.TypesDefinition.*;
 
 import com.eugene.wc.protocol.api.data.StreamDataReader;
+import com.eugene.wc.protocol.api.data.WdfList;
 import com.eugene.wc.protocol.api.data.exception.FormatException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+
+import javax.inject.Inject;
 
 public class StreamDataReaderImpl implements StreamDataReader {
 
@@ -16,6 +19,7 @@ public class StreamDataReaderImpl implements StreamDataReader {
     private byte nextByte;
     private boolean readLookahead;
 
+    @Inject
     public StreamDataReaderImpl(InputStream in) {
         this.in = in;
     }
@@ -77,26 +81,59 @@ public class StreamDataReaderImpl implements StreamDataReader {
         }
         readLookahead = false;
         short length = readInteger16();
-        byte[] rawBytes = in.readNBytes(length);
-        return rawBytes;
+        return in.readNBytes(length);
     }
 
     @Override
-    public void readListStart() throws IOException {
+    public WdfList readNextWdfList() throws IOException {
         if (!hasListStart()) {
             throw new FormatException();
         }
         readLookahead = false;
+        WdfList list = new WdfList();
+        readWdfListRecursively(list, 1);
+        return list;
+    }
+
+    private WdfList readWdfListRecursively(WdfList list, int level) throws IOException {
+        if (isEof()) {
+            return list;
+        }
+        if (hasListStart()) {
+            readLookahead = false;
+            WdfList nestedList = new WdfList();
+            list.add(nestedList);
+            readWdfListRecursively(nestedList, level + 1);
+            return readWdfListRecursively(list, level);
+        } else if (hasEnd()) {
+            readLookahead = false;
+            return list;
+        }
+        Object obj = readNextObject();
+        readLookahead = false;
+        list.add(obj);
+        return readWdfListRecursively(list, level);
+    }
+
+    private Object readNextObject() throws IOException {
+        Object value;
+        if (hasBoolean()) {
+            value = readNextBoolean();
+        } else if (hasInteger()) {
+            value = readNextInt();
+        } else if (hasDouble()) {
+            value = readNextDouble();
+        } else if (hasString()) {
+            value = readNextString();
+        } else if (hasRaw()) {
+            value = readNextRaw();
+        } else {
+            throw new IllegalArgumentException();
+        }
+        return value;
     }
 
     @Override
-    public void readListEnd() throws IOException {
-        if (!hasEnd()) {
-            throw new FormatException();
-        }
-        readLookahead = false;
-    }
-
     public boolean isEof() throws IOException {
         if (!readLookahead) readLookahead();
         return nextByte == -1;
@@ -119,7 +156,8 @@ public class StreamDataReaderImpl implements StreamDataReader {
 
     private boolean hasBoolean() throws IOException {
         if (!readLookahead) readLookahead();
-        return nextByte == BOOLEAN_TYPE;
+        byte justType = (byte) (nextByte & 0xF0);
+        return justType == BOOLEAN_TYPE;
     }
 
     private boolean hasRaw() throws IOException {

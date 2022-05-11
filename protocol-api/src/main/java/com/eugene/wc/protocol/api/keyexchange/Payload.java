@@ -8,7 +8,6 @@ public class Payload {
 
     // part of public key hash
     private final byte[] commitment;
-
     private final List<TransportDescriptor> descriptors;
 
     public Payload(byte[] commitment, List<TransportDescriptor> descriptors) {

@@ -14,9 +14,10 @@ public interface StreamDataReader {
 
     byte[] readNextRaw() throws IOException;
 
-    void readListStart() throws IOException;
+    WdfList readNextWdfList() throws IOException;
 
-    void readListEnd() throws IOException;
+
+    boolean isEof() throws IOException;
 
     void close() throws IOException;
 }

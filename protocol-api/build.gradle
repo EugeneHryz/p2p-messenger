@@ -1,0 +1,11 @@
+apply plugin: 'java-library'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+    implementation "com.google.dagger:dagger:$dagger_version"
+
+    implementation "org.apache.commons:commons-lang3:$apache_commons_lang_version"
+
+    testImplementation "junit:junit:$junit_version"
+}

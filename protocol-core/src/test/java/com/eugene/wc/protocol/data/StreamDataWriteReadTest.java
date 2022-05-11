@@ -2,6 +2,7 @@ package com.eugene.wc.protocol.data;
 
 import com.eugene.wc.protocol.api.data.StreamDataReader;
 import com.eugene.wc.protocol.api.data.StreamDataWriter;
+import com.eugene.wc.protocol.api.data.WdfList;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -74,5 +75,52 @@ public class StreamDataWriteReadTest {
 
         boolean readValue = reader.readNextBoolean();
         Assert.assertFalse(readValue);
+    }
+
+    @Test
+    public void testSimpleListWriteRead() throws IOException {
+        WdfList list = new WdfList();
+        list.add(904);
+        list.add("How was your day?o_ooo");
+        list.add(43.8);
+        list.add(false);
+        list.add(true);
+
+        writer.writeWdfList(list);
+        writer.flush();
+
+        WdfList actual = reader.readNextWdfList();
+        Assert.assertEquals(list, actual);
+    }
+
+    @Test
+    public void testNestedListWriteRead() throws IOException {
+        WdfList mainList = new WdfList();
+        mainList.add(904);
+        mainList.add("How was your day?o_ooo");
+        mainList.add(-9000.123);
+        mainList.add(false);
+        mainList.add(true);
+
+        WdfList nestedList = new WdfList();
+        nestedList.add("189:jsjsjsjs(9001111");
+
+        WdfList anotherNestedList = new WdfList();
+        anotherNestedList.add(12);
+        anotherNestedList.add(780);
+        anotherNestedList.add("jkjad dsnsns 111");
+
+        nestedList.add(anotherNestedList);
+        nestedList.add("wooooooosh    l");
+
+        mainList.add(nestedList);
+        mainList.add(112.0006);
+        mainList.add(anotherNestedList);
+
+        writer.writeWdfList(mainList);
+        writer.flush();
+
+        WdfList actual = reader.readNextWdfList();
+        Assert.assertEquals(mainList, actual);
     }
 }

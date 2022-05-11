@@ -53,8 +53,7 @@ public class StartupActivity extends BaseActivity {
     private void handleStateChange(State state) {
         if (state == State.SIGNED_IN) {
             Log.d(TAG, "Successfully signed in :)");
-            startHomeActivity();
-            supportFinishAfterTransition();
+            onSignedIn();
         } else {
             Log.d(TAG, "Error while trying to log in");
         }
@@ -68,9 +67,7 @@ public class StartupActivity extends BaseActivity {
             Log.d(TAG, "recieved result: " + resultCode);
 
             if (resultCode == RESULT_OK) {
-                startHomeActivity();
-                supportFinishAfterTransition();
-                // open entry activity
+                onSignedIn();
 
             } else if (resultCode == RESULT_CANCELED) {
                 Log.d(TAG, "User cancelled account creation");
@@ -82,6 +79,12 @@ public class StartupActivity extends BaseActivity {
     private void startSignUpActivityForResult() {
         Intent intent = new Intent(this, SignUpActivity.class);
         startActivityForResult(intent, RequestCode.SETUP_ACCOUNT);
+    }
+
+    private void onSignedIn() {
+        viewModel.startServices();
+        startHomeActivity();
+        supportFinishAfterTransition();
     }
 
     private void startHomeActivity() {

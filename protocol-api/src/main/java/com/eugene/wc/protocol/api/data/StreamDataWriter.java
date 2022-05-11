@@ -14,9 +14,11 @@ public interface StreamDataWriter {
 
     void writeRaw(byte[] value) throws IOException;
 
-    void writeStartOfTheList() throws IOException;
+    void writeListStart() throws IOException;
 
-    void writeEndOfTheList() throws IOException;
+    void writeListEnd() throws IOException;
+
+    void writeWdfList(WdfList list) throws IOException;
 
     void flush() throws IOException;
 

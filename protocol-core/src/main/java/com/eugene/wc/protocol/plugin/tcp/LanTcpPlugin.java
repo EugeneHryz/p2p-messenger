@@ -1,0 +1,332 @@
+package com.eugene.wc.protocol.plugin.tcp;
+
+import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.DEFAULT_PREF_PLUGIN_ENABLE;
+import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.ID;
+import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.PREF_IPV6;
+import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.PREF_LAN_IP_PORTS;
+import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.PROP_IPV6;
+import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.PROP_IP_PORTS;
+import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.PROP_PORT;
+import static com.eugene.wc.protocol.api.plugin.Plugin.PREF_PLUGIN_ENABLE;
+import static com.eugene.wc.protocol.api.properties.TransportPropertyConstants.MAX_PROPERTY_LENGTH;
+import static com.eugene.wc.protocol.api.util.StringUtils.fromHexString;
+import static com.eugene.wc.protocol.api.util.StringUtils.isNullOrEmpty;
+import static com.eugene.wc.protocol.api.util.StringUtils.join;
+import static com.eugene.wc.protocol.api.util.StringUtils.toHexString;
+import static com.eugene.wc.protocol.api.util.StringUtils.utf8IsTooLong;
+import static java.lang.Integer.parseInt;
+import static java.util.Collections.addAll;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.sort;
+import static java.util.logging.Logger.getLogger;
+
+import com.eugene.wc.protocol.api.plugin.Backoff;
+import com.eugene.wc.protocol.api.plugin.PluginCallback;
+import com.eugene.wc.protocol.api.plugin.TransportId;
+import com.eugene.wc.protocol.api.properties.TransportProperties;
+import com.eugene.wc.protocol.api.settings.Settings;
+
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.InterfaceAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.logging.Logger;
+
+import javax.annotation.Nullable;
+
+public class LanTcpPlugin extends TcpPlugin {
+
+	private static final Logger LOG = getLogger(LanTcpPlugin.class.getName());
+
+	private static final String SEPARATOR = ",";
+
+	/**
+	 * The IP address of an Android device providing a wifi access point.
+	 * <p>
+	 * Most devices use this address, but at least one device (Honor 8A) may
+	 * use other addresses in the range 192.168.43.0/24.
+	 */
+	private static final InetAddress WIFI_AP_ADDRESS;
+
+	/**
+	 * The IP address of an Android device providing a wifi direct
+	 * legacy mode access point.
+	 */
+	private static final InetAddress WIFI_DIRECT_AP_ADDRESS;
+
+	static {
+		try {
+			WIFI_AP_ADDRESS = InetAddress.getByAddress(
+					new byte[] {(byte) 192, (byte) 168, 43, 1});
+			WIFI_DIRECT_AP_ADDRESS = InetAddress.getByAddress(
+					new byte[] {(byte) 192, (byte) 168, 49, 1});
+		} catch (UnknownHostException e) {
+			// Should only be thrown if the address has an illegal length
+			throw new AssertionError(e);
+		}
+	}
+
+	public LanTcpPlugin(Executor ioExecutor,
+			Executor wakefulIoExecutor,
+			Backoff backoff,
+			PluginCallback callback,
+			long maxLatency,
+			int maxIdleTime,
+			int connectionTimeout) {
+		super(ioExecutor, wakefulIoExecutor, backoff, callback, maxLatency,
+				maxIdleTime, connectionTimeout);
+	}
+
+	@Override
+	public TransportId getId() {
+		return ID;
+	}
+
+	@Override
+	public void start() {
+		if (used.getAndSet(true)) throw new IllegalStateException();
+		initialisePortProperty();
+		Settings settings = callback.getSettings();
+		state.setStarted(settings.getBoolean(PREF_PLUGIN_ENABLE,
+				DEFAULT_PREF_PLUGIN_ENABLE));
+		bind();
+	}
+
+	protected void initialisePortProperty() {
+		TransportProperties p = callback.getLocalProperties();
+		if (isNullOrEmpty(p.get(PROP_PORT))) {
+			int port = chooseEphemeralPort();
+			p.put(PROP_PORT, String.valueOf(port));
+			callback.mergeLocalProperties(p);
+		}
+	}
+
+	@Override
+	protected boolean isEnabledByDefault() {
+		return DEFAULT_PREF_PLUGIN_ENABLE;
+	}
+
+	@Override
+	protected List<InetSocketAddress> getLocalSocketAddresses(boolean ipv4) {
+		TransportProperties p = callback.getLocalProperties();
+		int preferredPort = parsePortProperty(p.get(PROP_PORT));
+		String oldIpPorts = p.get(PROP_IP_PORTS);
+		List<InetSocketAddress> olds = parseIpv4SocketAddresses(oldIpPorts);
+
+		List<InetSocketAddress> locals = new ArrayList<>();
+		List<InetSocketAddress> fallbacks = new ArrayList<>();
+		for (InetAddress local : getUsableLocalInetAddresses(ipv4)) {
+			// If we've used this address before, try to use the same port
+			int port = preferredPort;
+			for (InetSocketAddress old : olds) {
+				if (old.getAddress().equals(local)) {
+					port = old.getPort();
+					break;
+				}
+			}
+			locals.add(new InetSocketAddress(local, port));
+			// Fall back to any available port
+			fallbacks.add(new InetSocketAddress(local, 0));
+		}
+		locals.addAll(fallbacks);
+		return locals;
+	}
+
+	private int parsePortProperty(@Nullable String portProperty) {
+		if (isNullOrEmpty(portProperty)) return 0;
+		try {
+			return parseInt(portProperty);
+		} catch (NumberFormatException e) {
+			return 0;
+		}
+	}
+
+	private List<InetSocketAddress> parseIpv4SocketAddresses(String ipPorts) {
+		List<InetSocketAddress> addresses = new ArrayList<>();
+		if (isNullOrEmpty(ipPorts)) return addresses;
+		for (String ipPort : ipPorts.split(SEPARATOR)) {
+			InetSocketAddress a = parseIpv4SocketAddress(ipPort);
+			if (a != null) addresses.add(a);
+		}
+		return addresses;
+	}
+
+	protected List<InetAddress> getUsableLocalInetAddresses(boolean ipv4) {
+		List<InterfaceAddress> ifAddrs =
+				new ArrayList<>(getLocalInterfaceAddresses());
+		// Prefer longer network prefixes
+		sort(ifAddrs, (a, b) ->
+				b.getNetworkPrefixLength() - a.getNetworkPrefixLength());
+		List<InetAddress> addrs = new ArrayList<>();
+		for (InterfaceAddress ifAddr : ifAddrs) {
+			InetAddress addr = ifAddr.getAddress();
+			if (isAcceptableAddress(addr, ipv4)) addrs.add(addr);
+		}
+		return addrs;
+	}
+
+	@Override
+	protected void setLocalSocketAddress(InetSocketAddress a, boolean ipv4) {
+		if (ipv4) setLocalIpv4SocketAddress(a);
+		else setLocalIpv6SocketAddress(a);
+	}
+
+	private void setLocalIpv4SocketAddress(InetSocketAddress a) {
+		String ipPort = getIpPortString(a);
+		updateRecentAddresses(PREF_LAN_IP_PORTS, PROP_IP_PORTS, ipPort);
+	}
+
+	private void setLocalIpv6SocketAddress(InetSocketAddress a) {
+		String hex = toHexString(a.getAddress().getAddress());
+		updateRecentAddresses(PREF_IPV6, PROP_IPV6, hex);
+	}
+
+	private void updateRecentAddresses(String settingKey, String propertyKey,
+			String item) {
+		// Get the list of recently used addresses
+		String setting = callback.getSettings().get(settingKey);
+		Deque<String> recent = new LinkedList<>();
+		if (!isNullOrEmpty(setting)) {
+			addAll(recent, setting.split(SEPARATOR));
+		}
+		if (recent.remove(item)) {
+			// Move the item to the start of the list
+			recent.addFirst(item);
+			setting = join(recent, SEPARATOR);
+		} else {
+			// Add the item to the start of the list
+			recent.addFirst(item);
+			// Drop items from the end of the list if it's too long to encode
+			setting = join(recent, SEPARATOR);
+			while (utf8IsTooLong(setting, MAX_PROPERTY_LENGTH)) {
+				recent.removeLast();
+				setting = join(recent, SEPARATOR);
+			}
+			// Update the list of addresses shared with contacts
+			TransportProperties properties = new TransportProperties();
+			properties.put(propertyKey, setting);
+			callback.mergeLocalProperties(properties);
+		}
+		// Save the setting
+		Settings settings = new Settings();
+		settings.put(settingKey, setting);
+		callback.mergeSettings(settings);
+	}
+
+	protected boolean isIpv6LinkLocalAddress(InetAddress a) {
+		return a instanceof Inet6Address && a.isLinkLocalAddress();
+	}
+
+	@Override
+	protected List<InetSocketAddress> getRemoteSocketAddresses(
+			TransportProperties p, boolean ipv4) {
+		if (ipv4) return getRemoteIpv4SocketAddresses(p);
+		else return getRemoteIpv6SocketAddresses(p);
+	}
+
+	private List<InetSocketAddress> getRemoteIpv4SocketAddresses(
+			TransportProperties p) {
+		String ipPorts = p.get(PROP_IP_PORTS);
+		List<InetSocketAddress> remotes = parseIpv4SocketAddresses(ipPorts);
+		int port = parsePortProperty(p.get(PROP_PORT));
+		// If the contact has a preferred port, we can guess their IP:port when
+		// they're providing a wifi access point
+		if (port != 0) {
+			InetSocketAddress wifiAp =
+					new InetSocketAddress(WIFI_AP_ADDRESS, port);
+			if (!remotes.contains(wifiAp)) remotes.add(wifiAp);
+			InetSocketAddress wifiDirectAp =
+					new InetSocketAddress(WIFI_DIRECT_AP_ADDRESS, port);
+			if (!remotes.contains(wifiDirectAp)) remotes.add(wifiDirectAp);
+		}
+		return remotes;
+	}
+
+	private List<InetSocketAddress> getRemoteIpv6SocketAddresses(
+			TransportProperties p) {
+		List<InetAddress> addrs = parseIpv6Addresses(p.get(PROP_IPV6));
+		int port = parsePortProperty(p.get(PROP_PORT));
+		if (addrs.isEmpty() || port == 0) return emptyList();
+		List<InetSocketAddress> remotes = new ArrayList<>();
+		for (InetAddress addr : addrs) {
+			remotes.add(new InetSocketAddress(addr, port));
+		}
+		return remotes;
+	}
+
+	private List<InetAddress> parseIpv6Addresses(String property) {
+		if (isNullOrEmpty(property)) return emptyList();
+		try {
+			List<InetAddress> addrs = new ArrayList<>();
+			for (String hex : property.split(SEPARATOR)) {
+				byte[] ip = fromHexString(hex);
+				if (ip.length == 16) addrs.add(InetAddress.getByAddress(ip));
+			}
+			return addrs;
+		} catch (IllegalArgumentException | UnknownHostException e) {
+			return emptyList();
+		}
+	}
+
+	private boolean isAcceptableAddress(InetAddress a, boolean ipv4) {
+		if (ipv4) {
+			// Accept link-local and site-local IPv4 addresses
+			boolean isIpv4 = a instanceof Inet4Address;
+			boolean link = a.isLinkLocalAddress();
+			boolean site = a.isSiteLocalAddress();
+			return isIpv4 && (link || site);
+		} else {
+			// Accept link-local IPv6 addresses
+			return isIpv6LinkLocalAddress(a);
+		}
+	}
+
+	@Override
+	protected boolean isConnectable(InterfaceAddress local,
+			InetSocketAddress remote) {
+		if (remote.getPort() == 0) return false;
+		InetAddress remoteAddress = remote.getAddress();
+		boolean ipv4 = local.getAddress() instanceof Inet4Address;
+		if (!isAcceptableAddress(remoteAddress, ipv4)) return false;
+		// Try to determine whether the address is on the same LAN as us
+		byte[] localIp = local.getAddress().getAddress();
+		byte[] remoteIp = remote.getAddress().getAddress();
+		int prefixLength = local.getNetworkPrefixLength();
+		return areAddressesInSameNetwork(localIp, remoteIp, prefixLength);
+	}
+
+	// Package access for testing
+	static boolean areAddressesInSameNetwork(byte[] localIp, byte[] remoteIp,
+			int prefixLength) {
+		if (localIp.length != remoteIp.length) return false;
+		// Compare the first prefixLength bits of the addresses
+		for (int i = 0; i < prefixLength; i++) {
+			int byteIndex = i >> 3;
+			int bitIndex = i & 7; // 0 to 7
+			int mask = 128 >> bitIndex; // Select the bit at bitIndex
+			if ((localIp[byteIndex] & mask) != (remoteIp[byteIndex] & mask)) {
+				return false; // Addresses differ at bit i
+			}
+		}
+		return true;
+	}
+
+	@Override
+	public boolean supportsKeyAgreement() {
+		return true;
+	}
+
+	private List<InetSocketAddress> getLocalSocketAddresses() {
+		List<InetSocketAddress> addrs = new ArrayList<>();
+		addrs.addAll(getLocalSocketAddresses(true));
+		addrs.addAll(getLocalSocketAddresses(false));
+		return addrs;
+	}
+}

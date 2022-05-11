@@ -3,10 +3,13 @@ package com.eugene.wc.protocol.data;
 import static com.eugene.wc.protocol.api.data.TypesDefinition.*;
 
 import com.eugene.wc.protocol.api.data.StreamDataWriter;
+import com.eugene.wc.protocol.api.data.WdfList;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+
+import javax.inject.Inject;
 
 public class StreamDataWriterImpl implements StreamDataWriter {
 
@@ -15,6 +18,7 @@ public class StreamDataWriterImpl implements StreamDataWriter {
 
     private final OutputStream out;
 
+    @Inject
     public StreamDataWriterImpl(OutputStream out) {
         this.out = out;
     }
@@ -78,12 +82,64 @@ public class StreamDataWriterImpl implements StreamDataWriter {
     }
 
     @Override
-    public void writeStartOfTheList() throws IOException {
+    public void writeListStart() throws IOException {
         out.write(LIST_TYPE);
     }
 
     @Override
-    public void writeEndOfTheList() throws IOException {
+    public void writeListEnd() throws IOException {
+        out.write(NULL_TYPE);
+    }
+
+    @Override
+    public void writeWdfList(WdfList list) throws IOException {
+        out.write(LIST_TYPE);
+        writeWdfListRecursively(list, 0, 1);
+    }
+
+    private void writeWdfListRecursively(WdfList list, int index, int level) throws IOException {
+        if (index < list.size()) {
+
+            Object obj = list.get(index);
+            if (obj instanceof WdfList) {
+                writeStartOfTheList();
+                WdfList nestedList = (WdfList) obj;
+                writeWdfListRecursively(nestedList, 0, level + 1);
+            } else {
+                writeObject(obj);
+            }
+            writeWdfListRecursively(list, index + 1, level);
+        } else if (index == list.size()) {
+            writeEndOfTheList();
+        }
+    }
+
+    private void writeObject(Object obj) throws IOException {
+        if (obj instanceof Boolean) {
+            Boolean value = (Boolean) obj;
+            writeBoolean(value);
+        } else if (obj instanceof Integer) {
+            Integer value = (Integer) obj;
+            writeInteger(value);
+        } else if (obj instanceof Double) {
+            Double value = (Double) obj;
+            writeDouble(value);
+        } else if (obj instanceof String) {
+            String str = (String) obj;
+            writeString(str);
+        } else if (obj instanceof byte[]) {
+            byte[] rawBytes = (byte[]) obj;
+            writeRaw(rawBytes);
+        } else {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    private void writeStartOfTheList() throws IOException {
+        out.write(LIST_TYPE);
+    }
+
+    private void writeEndOfTheList() throws IOException {
         out.write(NULL_TYPE);
     }
 }

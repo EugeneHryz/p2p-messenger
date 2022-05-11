@@ -28,7 +28,7 @@ public class H2Database extends AbstractJdbcDatabase {
         this.dbConfig = dbConfig;
         File dir = dbConfig.getDatabaseDirectory();
         String path = new File(dir, "db").getAbsolutePath();
-        url = "jdbc:h2:split:" + path + ";CIPHER=AES;MULTI_THREADED=1;WRITE_DELAY=0";
+        url = "jdbc:h2:split:" + path + ";CIPHER=AES;WRITE_DELAY=0";
     }
 
     @Override
