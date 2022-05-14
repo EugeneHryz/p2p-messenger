@@ -1,5 +1,7 @@
 package com.eugene.wc.protocol.api.data;
 
+import com.eugene.wc.protocol.api.plugin.TransportId;
+
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -31,6 +33,14 @@ public class WdfList extends ArrayList<Object> {
             throw new IllegalArgumentException();
         }
         return (Integer) o;
+    }
+
+    public Long getLong(int index) {
+        Object o = get(index);
+        if (!(o instanceof Long)) {
+            throw new IllegalArgumentException();
+        }
+        return (Long) o;
     }
 
     public Double getDouble(int index) {

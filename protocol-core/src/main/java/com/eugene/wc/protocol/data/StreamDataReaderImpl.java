@@ -59,7 +59,8 @@ public class StreamDataReaderImpl implements StreamDataReader {
         }
         readLookahead = false;
         short strLength = readInteger16();
-        byte[] strBytes = in.readNBytes(strLength);
+        byte[] strBytes = new byte[strLength];
+        readIntoBuffer(strBytes, strLength);
 
         String str = new String(strBytes, StandardCharsets.UTF_8);
         return str;
@@ -81,7 +82,10 @@ public class StreamDataReaderImpl implements StreamDataReader {
         }
         readLookahead = false;
         short length = readInteger16();
-        return in.readNBytes(length);
+        byte[] raw = new byte[length];
+        readIntoBuffer(raw, length);
+
+        return raw;
     }
 
     @Override
@@ -137,6 +141,15 @@ public class StreamDataReaderImpl implements StreamDataReader {
     public boolean isEof() throws IOException {
         if (!readLookahead) readLookahead();
         return nextByte == -1;
+    }
+
+    private void readIntoBuffer(byte[] b, int length) throws IOException {
+        int offset = 0;
+        while (offset < length) {
+            int read = in.read(b, offset, length - offset);
+            if (read == -1) throw new FormatException();
+            offset += read;
+        }
     }
 
     private boolean hasInteger() throws IOException {

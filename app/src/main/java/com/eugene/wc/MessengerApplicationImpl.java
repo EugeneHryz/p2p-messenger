@@ -13,6 +13,8 @@ public class MessengerApplicationImpl extends Application implements MessengerAp
         appComponent = DaggerApplicationComponent.builder()
                 .appModule(new AppModule(this))
                 .build();
+
+        AndroidEagerSingletons.Helper.injectEagerSingletons(appComponent);
     }
 
     @Override

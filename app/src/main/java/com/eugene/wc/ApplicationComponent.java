@@ -2,11 +2,15 @@ package com.eugene.wc;
 
 import androidx.lifecycle.ViewModelProvider;
 
+import com.eugene.wc.network.AndroidNetworkModule;
 import com.eugene.wc.protocol.ProtocolCoreModule;
 import com.eugene.wc.protocol.api.account.AccountManager;
+import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.db.DbExecutor;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.io.IoExecutor;
+import com.eugene.wc.protocol.api.keyexchange.KeyExchangeTask;
+import com.eugene.wc.protocol.api.lifecycle.EventExecutor;
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
 import com.eugene.wc.protocol.api.plugin.PluginManager;
 import com.eugene.wc.protocol.api.system.AndroidExecutor;
@@ -29,12 +33,17 @@ import dagger.Component;
                         ViewModelModule.class,
                         AppModule.class,
                         AndroidMessengerModule.class,
+                        AndroidNetworkModule.class,
                         ClockModule.class})
-public interface ApplicationComponent {
+public interface ApplicationComponent extends AndroidEagerSingletons {
 
     JdbcDatabase jdbcDatabase();
 
     AccountManager accountManager();
+
+    CryptoComponent cryptoComponent();
+
+    KeyExchangeTask keyExchangeTask();
 
     ViewModelProvider.Factory viewModelFactory();
 

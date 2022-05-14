@@ -4,15 +4,18 @@ import com.eugene.wc.protocol.api.Predicate;
 import com.eugene.wc.protocol.api.keyexchange.record.Record;
 import com.eugene.wc.protocol.api.keyexchange.record.RecordReader;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 public class RecordReaderImpl implements RecordReader {
 
-    private final InputStream input;
+    private final DataInputStream input;
 
-    public RecordReaderImpl(InputStream input) {
-        this.input = input;
+    public RecordReaderImpl(InputStream in) {
+        if (!in.markSupported()) in = new BufferedInputStream(in, 1);
+        this.input = new DataInputStream(in);
     }
 
     @Override
@@ -23,7 +26,9 @@ public class RecordReaderImpl implements RecordReader {
             byte nextType = (byte) input.read();
             int length = readInteger32();
 
-            byte[] content = input.readNBytes(length);
+            byte[] content = new byte[length];
+            input.readFully(content);
+
             Record record = new Record(nextType, content);
             if (accept.test(record)) {
                 recordWeNeed = record;
@@ -36,7 +41,8 @@ public class RecordReaderImpl implements RecordReader {
     public Record readNextRecord() throws IOException {
         byte type = (byte) input.read();
         int length = readInteger32();
-        byte[] content = input.readNBytes(length);
+        byte[] content = new byte[length];
+        input.readFully(content);
 
         return new Record(type, content);
     }

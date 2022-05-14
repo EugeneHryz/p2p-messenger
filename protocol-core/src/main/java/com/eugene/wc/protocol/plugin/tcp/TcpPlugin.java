@@ -50,7 +50,7 @@ import javax.annotation.concurrent.ThreadSafe;
 
 abstract class TcpPlugin implements DuplexPlugin, EventListener {
 
-	private static final Logger LOG = getLogger(TcpPlugin.class.getName());
+	private static final Logger logger = getLogger(TcpPlugin.class.getName());
 
 	private static final Pattern DOTTED_QUAD =
 			Pattern.compile("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
@@ -147,7 +147,7 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 		ServerSocket ss = null;
 		for (InetSocketAddress addr : getLocalSocketAddresses(ipv4)) {
 			if (old != null && addr.equals(old.getLocalSocketAddress())) {
-				LOG.info("Server socket already bound");
+				logger.info("Server socket already bound");
 				return;
 			}
 			try {
@@ -155,26 +155,26 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 				ss.bind(addr);
 				break;
 			} catch (IOException e) {
-				if (LOG.isLoggable(INFO))
-					LOG.info("Failed to bind " + scrubSocketAddress(addr));
-				tryToClose(ss, LOG, WARNING);
+				if (logger.isLoggable(INFO))
+					logger.info("Failed to bind " + scrubSocketAddress(addr));
+				tryToClose(ss, logger, WARNING);
 			}
 		}
 		if (ss == null || !ss.isBound()) {
-			LOG.info("Could not bind server socket");
+			logger.info("Could not bind server socket");
 			return;
 		}
 		if (!state.setServerSocket(ss, ipv4)) {
-			LOG.info("Closing redundant server socket");
-			tryToClose(ss, LOG, WARNING);
+			logger.info("Closing redundant server socket");
+			tryToClose(ss, logger, WARNING);
 			return;
 		}
 		backoff.reset();
 		InetSocketAddress local =
 				(InetSocketAddress) ss.getLocalSocketAddress();
 		setLocalSocketAddress(local, ipv4);
-		if (LOG.isLoggable(INFO))
-			LOG.info("Listening on " + scrubSocketAddress(local));
+		if (logger.isLoggable(INFO))
+			logger.info("Listening on " + scrubSocketAddress(local));
 		ServerSocket finalSocket = ss;
 		ioExecutor.execute(() -> acceptContactConnections(finalSocket, ipv4));
 	}
@@ -194,12 +194,12 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 				s.setSoTimeout(socketTimeout);
 			} catch (IOException e) {
 				// This is expected when the server socket is closed
-				LOG.info("Server socket closed");
+				logger.info("Server socket closed");
 				state.clearServerSocket(ss, ipv4);
 				return;
 			}
-			if (LOG.isLoggable(INFO)) {
-				LOG.info("Connection from " +
+			if (logger.isLoggable(INFO)) {
+				logger.info("Connection from " +
 						scrubSocketAddress(s.getRemoteSocketAddress()));
 			}
 			backoff.reset();
@@ -209,7 +209,7 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 
 	@Override
 	public void stop() {
-		for (ServerSocket ss : state.setStopped()) tryToClose(ss, LOG, WARNING);
+		for (ServerSocket ss : state.setStopped()) tryToClose(ss, logger, WARNING);
 	}
 
 	@Override
@@ -266,7 +266,7 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 		if (ss == null) return null;
 		InterfaceAddress local = getLocalInterfaceAddress(ss.getInetAddress());
 		if (local == null) {
-			LOG.warning("No interface for server socket");
+			logger.warning("No interface for server socket");
 			return null;
 		}
 		for (InetSocketAddress remote : getRemoteSocketAddresses(p, ipv4)) {
@@ -276,26 +276,26 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 				continue;
 			}
 			if (!isConnectable(local, remote)) {
-				if (LOG.isLoggable(INFO)) {
-					LOG.info(scrubSocketAddress(remote) +
+				if (logger.isLoggable(INFO)) {
+					logger.info(scrubSocketAddress(remote) +
 							" is not connectable from " +
 							scrubSocketAddress(ss.getLocalSocketAddress()));
 				}
 				continue;
 			}
 			try {
-				if (LOG.isLoggable(INFO))
-					LOG.info("Connecting to " + scrubSocketAddress(remote));
+				if (logger.isLoggable(INFO))
+					logger.info("Connecting to " + scrubSocketAddress(remote));
 				Socket s = createSocket();
 				s.bind(new InetSocketAddress(ss.getInetAddress(), 0));
 				s.connect(remote, connectionTimeout);
 				s.setSoTimeout(socketTimeout);
-				if (LOG.isLoggable(INFO))
-					LOG.info("Connected to " + scrubSocketAddress(remote));
+				if (logger.isLoggable(INFO))
+					logger.info("Connected to " + scrubSocketAddress(remote));
 				return new TcpTransportConnection(this, s);
 			} catch (IOException e) {
-				if (LOG.isLoggable(INFO)) {
-					LOG.info("Could not connect to " +
+				if (logger.isLoggable(INFO)) {
+					logger.info("Could not connect to " +
 							scrubSocketAddress(remote));
 				}
 			}
@@ -346,10 +346,10 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 		return false;
 	}
 
-	@Override
-	public boolean supportsRendezvous() {
-		return false;
-	}
+//	@Override
+//	public boolean supportsRendezvous() {
+//		return false;
+//	}
 
 	public List<InterfaceAddress> getLocalInterfaceAddresses() {
 		List<InterfaceAddress> addrs = new ArrayList<>();
@@ -371,7 +371,7 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 	public void onEventOccurred(Event e) {
 		if (e instanceof SettingsUpdatedEvent) {
 			SettingsUpdatedEvent s = (SettingsUpdatedEvent) e;
-			if (s.getNamespace().equals(getId().getString()))
+			if (s.getNamespace().equals(getId().toString()))
 				ioExecutor.execute(() -> onSettingsUpdated(s.getSettings()));
 		}
 	}
@@ -383,10 +383,10 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 		List<ServerSocket> toClose = state.setEnabledByUser(enabledByUser);
 		State s = getState();
 		if (!toClose.isEmpty()) {
-			LOG.info("Disabled by user, closing server sockets");
-			for (ServerSocket ss : toClose) tryToClose(ss, LOG, WARNING);
+			logger.info("Disabled by user, closing server sockets");
+			for (ServerSocket ss : toClose) tryToClose(ss, logger, WARNING);
 		} else if (s == INACTIVE) {
-			LOG.info("Enabled by user, opening server sockets");
+			logger.info("Enabled by user, opening server sockets");
 			bind();
 		}
 	}

@@ -3,6 +3,7 @@ package com.eugene.wc.protocol.data;
 import com.eugene.wc.protocol.api.data.StreamDataReader;
 import com.eugene.wc.protocol.api.data.StreamDataWriter;
 import com.eugene.wc.protocol.api.data.WdfList;
+import com.eugene.wc.protocol.api.plugin.TransportId;
 
 import org.junit.After;
 import org.junit.Assert;

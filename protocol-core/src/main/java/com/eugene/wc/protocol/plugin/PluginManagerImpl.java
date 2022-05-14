@@ -54,8 +54,7 @@ import javax.inject.Inject;
 @ThreadSafe
 class PluginManagerImpl implements PluginManager, Service {
 
-	private static final Logger LOG =
-			getLogger(PluginManagerImpl.class.getName());
+	private static final Logger logger = getLogger(PluginManagerImpl.class.getName());
 
 	private final Executor ioExecutor, wakefulIoExecutor;
 	private final EventBus eventBus;
@@ -89,16 +88,16 @@ class PluginManagerImpl implements PluginManager, Service {
 		if (used.getAndSet(true)) throw new IllegalStateException();
 
 		// Instantiate the duplex plugins and start them asynchronously
-		LOG.info("Starting duplex plugins");
+		logger.info("Starting duplex plugins");
 		for (DuplexPluginFactory f : pluginConfig.getDuplexFactories()) {
 			TransportId t = f.getId();
-			LOG.info("About to create plugin for: " + f.getId().getString());
+			logger.info("About to create plugin for: " + f.getId().toString());
 			DuplexPlugin d = f.createPlugin(new Callback(t));
 			if (d == null) {
-				if (LOG.isLoggable(WARNING))
-					LOG.warning("Could not create plugin for " + t);
+				if (logger.isLoggable(WARNING))
+					logger.warning("Could not create plugin for " + t);
 			} else {
-				LOG.info("Launching PluginStarter...");
+				logger.info("Launching PluginStarter...");
 				plugins.put(t, d);
 				duplexPlugins.add(d);
 				CountDownLatch startLatch = new CountDownLatch(1);
@@ -113,7 +112,7 @@ class PluginManagerImpl implements PluginManager, Service {
 		CountDownLatch stopLatch = new CountDownLatch(plugins.size());
 
 		// Stop the duplex plugins
-		LOG.info("Stopping duplex plugins");
+		logger.info("Stopping duplex plugins");
 		for (DuplexPlugin d : duplexPlugins) {
 			CountDownLatch startLatch = startLatches.get(d.getId());
 			// Don't need the wakeful executor here as we wait for the plugin
@@ -122,7 +121,7 @@ class PluginManagerImpl implements PluginManager, Service {
 		}
 		// Wait for all the plugins to stop
 		try {
-			LOG.info("Waiting for all the plugins to stop");
+			logger.info("Waiting for all the plugins to stop");
 			stopLatch.await();
 		} catch (InterruptedException e) {
 			throw new ServiceException(e);
@@ -147,13 +146,13 @@ class PluginManagerImpl implements PluginManager, Service {
 		return supported;
 	}
 
-	@Override
-	public Collection<DuplexPlugin> getRendezvousPlugins() {
-		List<DuplexPlugin> supported = new ArrayList<>();
-		for (DuplexPlugin d : duplexPlugins)
-			if (d.supportsRendezvous()) supported.add(d);
-		return supported;
-	}
+//	@Override
+//	public Collection<DuplexPlugin> getRendezvousPlugins() {
+//		List<DuplexPlugin> supported = new ArrayList<>();
+//		for (DuplexPlugin d : duplexPlugins)
+//			if (d.supportsRendezvous()) supported.add(d);
+//		return supported;
+//	}
 
 	@Override
 	public void setPluginEnabled(TransportId t, boolean enabled) {
@@ -162,16 +161,16 @@ class PluginManagerImpl implements PluginManager, Service {
 
 		Settings s = new Settings();
 		s.putBoolean(PREF_PLUGIN_ENABLE, enabled);
-		ioExecutor.execute(() -> mergeSettings(s, t.getString()));
+		ioExecutor.execute(() -> mergeSettings(s, t.toString()));
 	}
 
 	private void mergeSettings(Settings s, String namespace) {
 		try {
 			long start = now();
 			settingsManager.mergeSettings(s, namespace);
-			logDuration(LOG, "Merging settings", start);
+			logDuration(logger, "Merging settings", start);
 		} catch (DbException e) {
-			logException(LOG, WARNING, e);
+			logException(logger, WARNING, e);
 		}
 	}
 
@@ -181,7 +180,7 @@ class PluginManagerImpl implements PluginManager, Service {
 		private final CountDownLatch startLatch;
 
 		private PluginStarter(Plugin plugin, CountDownLatch startLatch) {
-			LOG.info("In pluginStarter constructor");
+			logger.info("In pluginStarter constructor");
 			this.plugin = plugin;
 			this.startLatch = startLatch;
 		}
@@ -190,16 +189,16 @@ class PluginManagerImpl implements PluginManager, Service {
 		public void run() {
 			try {
 				long start = now();
-				LOG.info("BEFORE plugin.start()");
+				logger.info("BEFORE plugin.start()");
 				plugin.start();
-				LOG.info("AFTER plugin.start()");
-				logDuration(LOG, "Starting plugin " + plugin.getId(),
+				logger.info("AFTER plugin.start()");
+				logDuration(logger, "Starting plugin " + plugin.getId(),
 						start);
 
 			} catch (PluginException e) {
-				if (LOG.isLoggable(WARNING)) {
-					LOG.warning("Plugin " + plugin.getId() + " did not start");
-					logException(LOG, WARNING, e);
+				if (logger.isLoggable(WARNING)) {
+					logger.warning("Plugin " + plugin.getId() + " did not start");
+					logException(logger, WARNING, e);
 				}
 			} finally {
 				startLatch.countDown();
@@ -221,25 +220,25 @@ class PluginManagerImpl implements PluginManager, Service {
 
 		@Override
 		public void run() {
-			if (LOG.isLoggable(INFO))
-				LOG.info("Trying to stop plugin " + plugin.getId());
+			if (logger.isLoggable(INFO))
+				logger.info("Trying to stop plugin " + plugin.getId());
 			try {
 				// Wait for the plugin to finish starting
 				startLatch.await();
 				// Stop the plugin
 				long start = now();
 				plugin.stop();
-				if (LOG.isLoggable(INFO)) {
-					logDuration(LOG, "Stopping plugin " + plugin.getId(),
+				if (logger.isLoggable(INFO)) {
+					logDuration(logger, "Stopping plugin " + plugin.getId(),
 							start);
 				}
 			} catch (InterruptedException e) {
-				LOG.warning("Interrupted while waiting for plugin to stop");
+				logger.warning("Interrupted while waiting for plugin to stop");
 				// This task runs on an executor, so don't reset the interrupt
 			} catch (PluginException e) {
-				if (LOG.isLoggable(WARNING)) {
-					LOG.warning("Plugin " + plugin.getId() + " did not stop");
-					logException(LOG, WARNING, e);
+				if (logger.isLoggable(WARNING)) {
+					logger.warning("Plugin " + plugin.getId() + " did not stop");
+					logException(logger, WARNING, e);
 				}
 			} finally {
 				stopLatch.countDown();
@@ -260,9 +259,9 @@ class PluginManagerImpl implements PluginManager, Service {
 		@Override
 		public Settings getSettings() {
 			try {
-				return settingsManager.getSettings(id.getString());
+				return settingsManager.getSettings(id.toString());
 			} catch (DbException e) {
-				logException(LOG, WARNING, e);
+				logException(logger, WARNING, e);
 				return new Settings();
 			}
 		}
@@ -293,7 +292,7 @@ class PluginManagerImpl implements PluginManager, Service {
 
 		@Override
 		public void mergeSettings(Settings s) {
-			PluginManagerImpl.this.mergeSettings(s, id.getString());
+			PluginManagerImpl.this.mergeSettings(s, id.toString());
 		}
 
 		@Override
@@ -309,8 +308,8 @@ class PluginManagerImpl implements PluginManager, Service {
 		public void pluginStateChanged(Plugin.State newState) {
 			Plugin.State oldState = state.getAndSet(newState);
 			if (newState != oldState) {
-				if (LOG.isLoggable(INFO)) {
-					LOG.info(id + " changed from state " + oldState
+				if (logger.isLoggable(INFO)) {
+					logger.info(id + " changed from state " + oldState
 							+ " to " + newState);
 				}
 				eventBus.broadcast(new TransportStateEvent(id, newState));

@@ -108,4 +108,20 @@ public class StringUtils {
     public static boolean isValidMac(String mac) {
         return MAC.matcher(mac).matches();
     }
+
+    public static byte[] macToBytes(String mac) {
+        if (!MAC.matcher(mac).matches()) throw new IllegalArgumentException();
+        return fromHexString(mac.replaceAll(":", ""));
+    }
+
+    public static String macToString(byte[] mac) {
+        if (mac.length != 6) throw new IllegalArgumentException();
+        StringBuilder s = new StringBuilder();
+        for (byte b : mac) {
+            if (s.length() > 0) s.append(':');
+            s.append(HEX[(b >> 4) & 0xF]);
+            s.append(HEX[b & 0xF]);
+        }
+        return s.toString();
+    }
 }

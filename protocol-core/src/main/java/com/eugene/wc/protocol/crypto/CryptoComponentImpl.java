@@ -2,7 +2,10 @@ package com.eugene.wc.protocol.crypto;
 
 import com.eugene.wc.protocol.api.crypto.AuthenticatedCipher;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
+import com.eugene.wc.protocol.api.crypto.DHKeyExchange;
+import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.crypto.PasswordBasedKdf;
+import com.eugene.wc.protocol.api.crypto.PublicKey;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.DecryptionException;
@@ -11,6 +14,7 @@ import com.eugene.wc.protocol.api.crypto.exception.InvalidParameterException;
 
 import org.apache.commons.lang3.ArrayUtils;
 
+import java.security.KeyPairGenerator;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -24,13 +28,16 @@ public class CryptoComponentImpl implements CryptoComponent {
 
     private final AuthenticatedCipher authCipher;
     private final PasswordBasedKdf pbKdf;
+    private final DHKeyExchange dhKeyExchange;
 
     private final SecureRandom secureRandom;
 
     @Inject
-    public CryptoComponentImpl(AuthenticatedCipher authCipher, PasswordBasedKdf pbKdf) {
+    public CryptoComponentImpl(AuthenticatedCipher authCipher, PasswordBasedKdf pbKdf,
+                               DHKeyExchange dhKeyExchange) {
         this.authCipher = authCipher;
         this.pbKdf = pbKdf;
+        this.dhKeyExchange = dhKeyExchange;
 
         secureRandom = new SecureRandom();
     }
@@ -44,11 +51,10 @@ public class CryptoComponentImpl implements CryptoComponent {
 
     @Override
     public byte[] encryptWithPassword(byte[] plaintext, char[] password) {
-
         byte[] salt = new byte[SALT_LENGTH];
         secureRandom.nextBytes(salt);
 
-        byte[] ivBytes = new byte[AesWithHmacAuthenticatedCipher.IV_LENGTH];
+        byte[] ivBytes = new byte[AesHmacAuthenticatedCipher.IV_LENGTH];
         secureRandom.nextBytes(ivBytes);
         IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
 
@@ -67,7 +73,6 @@ public class CryptoComponentImpl implements CryptoComponent {
 
     @Override
     public byte[] decryptWithPassword(byte[] ciphertext, char[] password) throws DecryptionException {
-
         byte[] salt = Arrays.copyOf(ciphertext, SALT_LENGTH);
         byte[] bytesToDecrypt = Arrays.copyOfRange(ciphertext, SALT_LENGTH, ciphertext.length);
 
@@ -81,5 +86,18 @@ public class CryptoComponentImpl implements CryptoComponent {
         } catch (CryptoException e) {
             throw new DecryptionException("Error while decrypting with password", e);
         }
+    }
+
+    @Override
+    public KeyPair generateAgreementKeyPair() {
+        return dhKeyExchange.generateKeyPair();
+    }
+
+    @Override
+    public SecretKey deriveSharedSecret(KeyPair localKeyPair, PublicKey remoteKey)
+            throws CryptoException {
+
+        byte[] sharedSecret = dhKeyExchange.deriveSharedSecret(localKeyPair, remoteKey);
+        return new SecretKey(sharedSecret);
     }
 }

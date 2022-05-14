@@ -21,7 +21,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import at.favre.lib.crypto.HKDF;
 
-public class AesWithHmacAuthenticatedCipher implements AuthenticatedCipher {
+public class AesHmacAuthenticatedCipher implements AuthenticatedCipher {
 
     private static final String TRANSFORMATION_NAME = "AES/CBC/PKCS5Padding";
     private static final String MAC_ALGORITHM = "HmacSHA256";
@@ -95,8 +95,8 @@ public class AesWithHmacAuthenticatedCipher implements AuthenticatedCipher {
         mac.update(ciphertext, 0, ciphertext.length - MAC_LENGTH);
         byte[] calculatedAuthTag = mac.doFinal();
 
-        if (!ArrayUtil.compare(ciphertext, ciphertext.length - MAC_LENGTH,
-                calculatedAuthTag, 0, MAC_LENGTH)) {
+        if (ArrayUtil.compare(ciphertext, ciphertext.length - MAC_LENGTH,
+                calculatedAuthTag, 0, MAC_LENGTH) != 0) {
             throw new DecryptionException("Unable to decrypt because encrypted message " +
                     "possibly has been changed");
         }

@@ -1,12 +1,18 @@
 package com.eugene.wc.system;
 
+import com.eugene.wc.protocol.api.lifecycle.EventExecutor;
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
 import com.eugene.wc.protocol.api.system.AndroidExecutor;
 import com.eugene.wc.protocol.api.system.AndroidWakeLockManager;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Singleton;
 
@@ -40,11 +46,22 @@ public class AndroidSystemModule {
 		return androidExecutor;
 	}
 
+	@Provides
+	@Singleton
+	@EventExecutor
+	Executor provideEventExecutor(AndroidExecutor androidExecutor) {
+		return androidExecutor::runOnUiThread;
+	}
+
 //	@Provides
 //	@Singleton
-//	@EventExecutor
-//	Executor provideEventExecutor(AndroidExecutor androidExecutor) {
-//		return androidExecutor::runOnUiThread;
+//	@TestExecutor
+//	Executor provideTestExecutor() {
+//		RejectedExecutionHandler reh = new ThreadPoolExecutor.DiscardPolicy();
+//		BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
+//
+//		return new ThreadPoolExecutor(4, 8, 30,
+//				TimeUnit.SECONDS, taskQueue, reh);
 //	}
 
 //	@Provides

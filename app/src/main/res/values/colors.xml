@@ -15,4 +15,6 @@
     <color name="wc_yellow">#DFD049</color>
     <color name="wc_orange">#ECA337</color>
     <color name="wc_red">#F44336</color>
+
+    <color name="wc_gray">#8F919A</color>
 </resources>

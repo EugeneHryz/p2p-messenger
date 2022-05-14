@@ -54,6 +54,7 @@ public class LifecycleManagerImpl implements LifecycleManager {
     @Override
     public StartResult startServices(SecretKey secretKey) {
 
+        logger.info("Opening database...");
         eventBus.broadcast(new LifecycleStateEvent(state));
 
         try {
@@ -67,6 +68,7 @@ public class LifecycleManagerImpl implements LifecycleManager {
         state = State.STARTING_SERVICES;
         eventBus.broadcast(new LifecycleStateEvent(state));
 
+        logger.info("Starting services...");
         try {
             for (Service service : services) {
                 service.startService();

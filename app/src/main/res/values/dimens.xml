@@ -10,5 +10,8 @@
     <dimen name="text_edit_padding">12dp</dimen>
 
     <dimen name="small_margin">6dp</dimen>
+    <dimen name="medium_margin">14dp</dimen>
     <dimen name="button_padding">12dp</dimen>
+
+    <dimen name="transport_icon_size">40dp</dimen>
 </resources>

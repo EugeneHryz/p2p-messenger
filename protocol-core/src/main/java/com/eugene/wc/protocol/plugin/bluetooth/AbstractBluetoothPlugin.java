@@ -1,5 +1,6 @@
 package com.eugene.wc.protocol.plugin.bluetooth;
 
+import static com.eugene.wc.protocol.api.keyexchange.KeyAgreementConstants.TRANSPORT_ID_BLUETOOTH;
 import static com.eugene.wc.protocol.api.plugin.BluetoothConstants.*;
 import static com.eugene.wc.protocol.api.plugin.Plugin.State.ACTIVE;
 import static com.eugene.wc.protocol.api.plugin.Plugin.State.DISABLED;
@@ -9,14 +10,20 @@ import static com.eugene.wc.protocol.api.properties.TransportPropertyConstants.R
 import static com.eugene.wc.protocol.api.util.LogUtils.logException;
 import static com.eugene.wc.protocol.api.util.PrivacyUtils.scrubMacAddress;
 import static com.eugene.wc.protocol.api.util.StringUtils.isNullOrEmpty;
+import static com.eugene.wc.protocol.api.util.StringUtils.macToBytes;
+import static com.eugene.wc.protocol.api.util.StringUtils.macToString;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
 
 import com.eugene.wc.protocol.api.Multiset;
 import com.eugene.wc.protocol.api.Pair;
+import com.eugene.wc.protocol.api.data.WdfList;
+import com.eugene.wc.protocol.api.data.exception.FormatException;
 import com.eugene.wc.protocol.api.event.Event;
 import com.eugene.wc.protocol.api.event.EventListener;
+import com.eugene.wc.protocol.api.keyexchange.KeyExchangeConnection;
+import com.eugene.wc.protocol.api.keyexchange.KeyExchangeListener;
 import com.eugene.wc.protocol.api.plugin.Backoff;
 import com.eugene.wc.protocol.api.plugin.ConnectionHandler;
 import com.eugene.wc.protocol.api.plugin.PluginCallback;
@@ -374,12 +381,74 @@ public abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 
 	@Override
 	public void onEventOccurred(Event event) {
-
 	}
 
 	@Override
 	public boolean supportsKeyAgreement() {
 		return true;
+	}
+
+	@Override
+	public KeyExchangeListener createKeyExchangeListener(byte[] commitment) {
+		if (getState() != ACTIVE) return null;
+		// No truncation necessary because COMMIT_LENGTH = 16
+		String uuid = UUID.nameUUIDFromBytes(commitment).toString();
+		if (LOG.isLoggable(INFO)) LOG.info("Key agreement UUID " + uuid);
+		// Bind a server socket for receiving key agreement connections
+		SS ss;
+		try {
+			ss = openServerSocket(uuid);
+		} catch (IOException e) {
+			logException(LOG, WARNING, e);
+			return null;
+		}
+		if (getState() != ACTIVE) {
+			tryToClose(ss);
+			return null;
+		}
+		WdfList descriptor = new WdfList();
+		descriptor.add(TRANSPORT_ID_BLUETOOTH);
+		String address = getBluetoothAddress();
+		if (address != null) descriptor.add(macToBytes(address));
+		return new BluetoothKeyAgreementListener(descriptor, ss);
+	}
+
+	@Override
+	public DuplexTransportConnection createKeyExchangeConnection(
+			byte[] commitment, WdfList descriptor) {
+		if (getState() != ACTIVE) return null;
+		// No truncation necessary because COMMIT_LENGTH = 16
+		String uuid = UUID.nameUUIDFromBytes(commitment).toString();
+		DuplexTransportConnection conn;
+		if (descriptor.size() == 1) {
+			if (LOG.isLoggable(INFO)) {
+				LOG.info("Discovering address for key agreement UUID " +
+						uuid);
+			}
+			conn = discoverAndConnect(uuid);
+		} else {
+			String address;
+			try {
+				address = parseAddress(descriptor);
+			} catch (FormatException e) {
+				LOG.info("Invalid address in key agreement descriptor");
+				return null;
+			}
+			if (LOG.isLoggable(INFO))
+				LOG.info("Connecting to key agreement UUID " + uuid);
+			conn = connect(address, uuid);
+		}
+		if (conn != null) {
+			connectionLimiter.connectionOpened(conn);
+			setEverConnected();
+		}
+		return conn;
+	}
+
+	private String parseAddress(WdfList descriptor) throws FormatException {
+		byte[] mac = descriptor.getRaw(1);
+		if (mac.length != 6) throw new FormatException();
+		return macToString(mac);
 	}
 
 	@Override
@@ -407,9 +476,32 @@ public abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 		return conn;
 	}
 
-	@Override
-	public boolean supportsRendezvous() {
-		return false;
+//	@Override
+//	public boolean supportsRendezvous() {
+//		return false;
+//	}
+
+	private class BluetoothKeyAgreementListener extends KeyExchangeListener {
+
+		private final SS ss;
+
+		private BluetoothKeyAgreementListener(WdfList descriptor, SS ss) {
+			super(descriptor);
+			this.ss = ss;
+		}
+
+		@Override
+		public KeyExchangeConnection accept() throws IOException {
+			DuplexTransportConnection conn = acceptConnection(ss);
+			if (LOG.isLoggable(INFO)) LOG.info(ID + ": Incoming connection");
+			connectionLimiter.connectionOpened(conn);
+			return new KeyExchangeConnection(conn, ID);
+		}
+
+		@Override
+		public void close() {
+			tryToClose(ss);
+		}
 	}
 
 	@ThreadSafe
@@ -427,6 +519,8 @@ public abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 		private synchronized void setStarted(boolean enabledByUser) {
 			started = true;
 			this.enabledByUser = enabledByUser;
+			System.out.println("AbstractBluetoothPlugin: state changed in setStarted: "
+					+ getState().name());
 			callback.pluginStateChanged(getState());
 		}
 
@@ -435,6 +529,8 @@ public abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 			stopped = true;
 			SS ss = serverSocket;
 			serverSocket = null;
+			System.out.println("AbstractBluetoothPlugin: state changed in setStopped: "
+					+ getState().name());
 			callback.pluginStateChanged(getState());
 			return ss;
 		}
@@ -447,6 +543,8 @@ public abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 				ss = serverSocket;
 				serverSocket = null;
 			}
+			System.out.println("AbstractBluetoothPlugin: state changed in setEnabledByUser: "
+					+ getState().name());
 			callback.pluginStateChanged(getState());
 			return ss;
 		}
@@ -454,6 +552,8 @@ public abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 		private synchronized boolean setServerSocket(SS ss) {
 			if (stopped || serverSocket != null) return false;
 			serverSocket = ss;
+			System.out.println("AbstractBluetoothPlugin: state changed in setServerSocket: "
+					+ getState().name());
 			callback.pluginStateChanged(getState());
 			return true;
 		}
@@ -462,6 +562,8 @@ public abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 		private synchronized SS clearServerSocket() {
 			SS ss = serverSocket;
 			serverSocket = null;
+			System.out.println("AbstractBluetoothPlugin: state changed in clearServerSocket: "
+					+ getState().name());
 			callback.pluginStateChanged(getState());
 			return ss;
 		}

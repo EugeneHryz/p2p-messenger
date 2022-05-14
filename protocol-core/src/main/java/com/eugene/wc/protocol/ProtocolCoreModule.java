@@ -5,6 +5,7 @@ import com.eugene.wc.protocol.crypto.CryptoModule;
 import com.eugene.wc.protocol.db.DatabaseModule;
 import com.eugene.wc.protocol.event.EventModule;
 import com.eugene.wc.protocol.io.IoExecutorModule;
+import com.eugene.wc.protocol.keyexchange.KeyExchangeModule;
 import com.eugene.wc.protocol.lifecycle.LifecycleModule;
 import com.eugene.wc.protocol.plugin.PluginModule;
 import com.eugene.wc.protocol.settings.SettingsModule;
@@ -18,6 +19,7 @@ import dagger.Module;
                     LifecycleModule.class,
                     EventModule.class,
                     SettingsModule.class,
-                    PluginModule.class})
+                    PluginModule.class,
+                    KeyExchangeModule.class})
 public class ProtocolCoreModule {
 }

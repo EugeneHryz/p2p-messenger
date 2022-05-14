@@ -20,7 +20,7 @@ import javax.xml.parsers.ParserConfigurationException;
 @ThreadSafe
 class PortMapperImpl implements PortMapper {
 
-	private static final Logger LOG =
+	private static final Logger logger =
 			Logger.getLogger(PortMapperImpl.class.getName());
 
 //	private final ShutdownManager shutdownManager;
@@ -38,8 +38,8 @@ class PortMapperImpl implements PortMapper {
 		if (gateway == null) return null;
 		InetAddress internal = gateway.getLocalAddress();
 		if (internal == null) return null;
-		if (LOG.isLoggable(INFO))
-			LOG.info("Internal address " + scrubInetAddress(internal));
+		if (logger.isLoggable(INFO))
+			logger.info("Internal address " + scrubInetAddress(internal));
 		boolean succeeded = false;
 		InetAddress external = null;
 		try {
@@ -50,14 +50,14 @@ class PortMapperImpl implements PortMapper {
 			}
 			String externalString = gateway.getExternalIPAddress();
 			if (externalString == null) {
-				LOG.info("External address not available");
+				logger.info("External address not available");
 			} else {
 				external = InetAddress.getByName(externalString);
-				if (LOG.isLoggable(INFO))
-					LOG.info("External address " + scrubInetAddress(external));
+				if (logger.isLoggable(INFO))
+					logger.info("External address " + scrubInetAddress(external));
 			}
 		} catch (IOException | SAXException e) {
-			logException(LOG, WARNING, e);
+			logException(logger, WARNING, e);
 		}
 		return new MappingResult(internal, external, port, succeeded);
 	}
@@ -74,7 +74,7 @@ class PortMapperImpl implements PortMapper {
 		try {
 			d.discover();
 		} catch (IOException | SAXException | ParserConfigurationException e) {
-			logException(LOG, WARNING, e);
+			logException(logger, WARNING, e);
 		}
 		gateway = d.getValidGateway();
 	}
@@ -82,10 +82,10 @@ class PortMapperImpl implements PortMapper {
 	private void deleteMapping(int port) {
 		try {
 			gateway.deletePortMapping(port, "TCP");
-			if (LOG.isLoggable(INFO))
-				LOG.info("Deleted mapping for port " + port);
+			if (logger.isLoggable(INFO))
+				logger.info("Deleted mapping for port " + port);
 		} catch (IOException | SAXException e) {
-			logException(LOG, WARNING, e);
+			logException(logger, WARNING, e);
 		}
 	}
 }

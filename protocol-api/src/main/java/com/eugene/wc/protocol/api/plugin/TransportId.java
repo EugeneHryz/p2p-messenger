@@ -2,15 +2,8 @@ package com.eugene.wc.protocol.api.plugin;
 
 import com.eugene.wc.protocol.api.util.StringUtils;
 
-/**
- * Type-safe wrapper for a namespaced string that uniquely identifies a
- * transport plugin.
- */
 public class TransportId {
 
-	/**
-	 * The maximum length of a transport identifier in UTF-8 bytes.
-	 */
 	public static int MAX_TRANSPORT_ID_LENGTH = 100;
 
 	private final String id;
@@ -20,10 +13,6 @@ public class TransportId {
 		if (length == 0 || length > MAX_TRANSPORT_ID_LENGTH)
 			throw new IllegalArgumentException();
 		this.id = id;
-	}
-
-	public String getString() {
-		return id;
 	}
 
 	@Override

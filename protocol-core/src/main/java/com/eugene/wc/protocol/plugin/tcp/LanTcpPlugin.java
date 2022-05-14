@@ -1,5 +1,6 @@
 package com.eugene.wc.protocol.plugin.tcp;
 
+import static com.eugene.wc.protocol.api.keyexchange.KeyAgreementConstants.TRANSPORT_ID_LAN;
 import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.DEFAULT_PREF_PLUGIN_ENABLE;
 import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.ID;
 import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.PREF_IPV6;
@@ -9,6 +10,9 @@ import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.PROP_IP_PORTS;
 import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.PROP_PORT;
 import static com.eugene.wc.protocol.api.plugin.Plugin.PREF_PLUGIN_ENABLE;
 import static com.eugene.wc.protocol.api.properties.TransportPropertyConstants.MAX_PROPERTY_LENGTH;
+import static com.eugene.wc.protocol.api.util.ByteUtils.MAX_16_BIT_UNSIGNED;
+import static com.eugene.wc.protocol.api.util.IoUtils.tryToClose;
+import static com.eugene.wc.protocol.api.util.PrivacyUtils.scrubSocketAddress;
 import static com.eugene.wc.protocol.api.util.StringUtils.fromHexString;
 import static com.eugene.wc.protocol.api.util.StringUtils.isNullOrEmpty;
 import static com.eugene.wc.protocol.api.util.StringUtils.join;
@@ -18,19 +22,29 @@ import static java.lang.Integer.parseInt;
 import static java.util.Collections.addAll;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.sort;
+import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
 
+import com.eugene.wc.protocol.api.data.WdfList;
+import com.eugene.wc.protocol.api.data.exception.FormatException;
+import com.eugene.wc.protocol.api.keyexchange.KeyExchangeConnection;
+import com.eugene.wc.protocol.api.keyexchange.KeyExchangeListener;
 import com.eugene.wc.protocol.api.plugin.Backoff;
 import com.eugene.wc.protocol.api.plugin.PluginCallback;
 import com.eugene.wc.protocol.api.plugin.TransportId;
+import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
 import com.eugene.wc.protocol.api.settings.Settings;
 
+import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.InterfaceAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -43,7 +57,7 @@ import javax.annotation.Nullable;
 
 public class LanTcpPlugin extends TcpPlugin {
 
-	private static final Logger LOG = getLogger(LanTcpPlugin.class.getName());
+	private static final Logger logger = getLogger(LanTcpPlugin.class.getName());
 
 	private static final String SEPARATOR = ",";
 
@@ -323,10 +337,117 @@ public class LanTcpPlugin extends TcpPlugin {
 		return true;
 	}
 
+	@Override
+	public KeyExchangeListener createKeyExchangeListener(byte[] commitment) {
+		ServerSocket ss = null;
+		for (InetSocketAddress addr : getLocalSocketAddresses()) {
+			// Don't try to reuse the same port we use for contact connections
+			addr = new InetSocketAddress(addr.getAddress(), 0);
+			try {
+				ss = new ServerSocket();
+				ss.bind(addr);
+				break;
+			} catch (IOException e) {
+				if (logger.isLoggable(INFO))
+					logger.info("Failed to bind " + scrubSocketAddress(addr));
+				tryToClose(ss, logger, WARNING);
+			}
+		}
+		if (ss == null || !ss.isBound()) {
+			logger.info("Could not bind server socket for key agreement");
+			return null;
+		}
+		WdfList descriptor = new WdfList();
+		descriptor.add(TRANSPORT_ID_LAN);
+		InetSocketAddress local =
+				(InetSocketAddress) ss.getLocalSocketAddress();
+		descriptor.add(local.getAddress().getAddress());
+		descriptor.add(local.getPort());
+		return new LanKeyAgreementListener(descriptor, ss);
+	}
+
 	private List<InetSocketAddress> getLocalSocketAddresses() {
 		List<InetSocketAddress> addrs = new ArrayList<>();
 		addrs.addAll(getLocalSocketAddresses(true));
 		addrs.addAll(getLocalSocketAddresses(false));
 		return addrs;
+	}
+
+	@Override
+	public DuplexTransportConnection createKeyExchangeConnection(byte[] commitment, WdfList descriptor) {
+		ServerSocket ss = state.getServerSocket(true);
+		if (ss == null) return null;
+		InterfaceAddress local = getLocalInterfaceAddress(ss.getInetAddress());
+		if (local == null) {
+			logger.warning("No interface for key agreement server socket");
+			return null;
+		}
+		InetSocketAddress remote;
+		try {
+			remote = parseSocketAddress(descriptor);
+		} catch (FormatException e) {
+			logger.info("Invalid IP/port in key agreement descriptor");
+			return null;
+		}
+		if (!isConnectable(local, remote)) {
+			if (logger.isLoggable(INFO)) {
+				logger.info(scrubSocketAddress(remote) +
+						" is not connectable from " +
+						scrubSocketAddress(ss.getLocalSocketAddress()));
+			}
+			return null;
+		}
+		try {
+			if (logger.isLoggable(INFO))
+				logger.info("Connecting to " + scrubSocketAddress(remote));
+			Socket s = createSocket();
+			s.bind(new InetSocketAddress(ss.getInetAddress(), 0));
+			s.connect(remote, connectionTimeout);
+			s.setSoTimeout(socketTimeout);
+			if (logger.isLoggable(INFO))
+				logger.info("Connected to " + scrubSocketAddress(remote));
+			return new TcpTransportConnection(this, s);
+		} catch (IOException e) {
+			if (logger.isLoggable(INFO))
+				logger.info("Could not connect to " + scrubSocketAddress(remote));
+			return null;
+		}
+	}
+
+	private InetSocketAddress parseSocketAddress(WdfList descriptor)
+			throws FormatException {
+		byte[] address = descriptor.getRaw(1);
+		int port = descriptor.getLong(2).intValue();
+		if (port < 1 || port > MAX_16_BIT_UNSIGNED) throw new FormatException();
+		try {
+			InetAddress addr = InetAddress.getByAddress(address);
+			return new InetSocketAddress(addr, port);
+		} catch (UnknownHostException e) {
+			// Invalid address length
+			throw new FormatException();
+		}
+	}
+
+	private class LanKeyAgreementListener extends KeyExchangeListener {
+
+		private final ServerSocket ss;
+
+		private LanKeyAgreementListener(WdfList descriptor, ServerSocket ss) {
+			super(descriptor);
+			this.ss = ss;
+		}
+
+		@Override
+		public KeyExchangeConnection accept() throws IOException {
+			Socket s = ss.accept();
+			if (logger.isLoggable(INFO)) logger.info(ID + ": Incoming connection");
+			return new KeyExchangeConnection(new TcpTransportConnection(
+					LanTcpPlugin.this, s), ID);
+		}
+
+		@Override
+		public void close() {
+			tryToClose(ss, logger, WARNING);
+		}
 	}
 }

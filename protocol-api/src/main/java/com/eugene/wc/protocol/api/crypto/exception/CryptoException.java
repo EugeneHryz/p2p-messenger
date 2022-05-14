@@ -1,6 +1,6 @@
 package com.eugene.wc.protocol.api.crypto.exception;
 
-public abstract class CryptoException extends Exception {
+public class CryptoException extends Exception {
 
     public CryptoException() {
         super();

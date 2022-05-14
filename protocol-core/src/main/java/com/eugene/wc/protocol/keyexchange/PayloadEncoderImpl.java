@@ -6,6 +6,7 @@ import com.eugene.wc.protocol.api.keyexchange.Payload;
 import com.eugene.wc.protocol.api.keyexchange.PayloadEncoder;
 import com.eugene.wc.protocol.api.keyexchange.TransportDescriptor;
 import com.eugene.wc.protocol.api.keyexchange.exception.EncodeException;
+import com.eugene.wc.protocol.api.plugin.TransportId;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,8 +33,8 @@ public class PayloadEncoderImpl implements PayloadEncoder {
             List<TransportDescriptor> descriptors = payload.getDescriptors();
             writer.writeListStart();
             for (TransportDescriptor td : descriptors) {
-                String transportId = td.getTransportId();
-                writer.writeString(transportId);
+                TransportId transportId = td.getTransportId();
+                writer.writeString(transportId.toString());
 
                 WdfList transportProps = td.getProperties();
                 writer.writeWdfList(transportProps);

@@ -6,6 +6,7 @@ import com.eugene.wc.protocol.api.keyexchange.Payload;
 import com.eugene.wc.protocol.api.keyexchange.PayloadDecoder;
 import com.eugene.wc.protocol.api.keyexchange.TransportDescriptor;
 import com.eugene.wc.protocol.api.keyexchange.exception.DecodeException;
+import com.eugene.wc.protocol.api.plugin.TransportId;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,7 +34,7 @@ public class PayloadDecoderImpl implements PayloadDecoder {
             List<TransportDescriptor> descriptors = new ArrayList<>();
             WdfList list = reader.readNextWdfList();
             for (int i = 0; i < list.size(); i += 2) {
-                String transportId = list.getString(i);
+                TransportId transportId = new TransportId(list.getString(i));
 
                 if (i + 1 < list.size()) {
                     WdfList properties = list.getWdfList(i + 1);

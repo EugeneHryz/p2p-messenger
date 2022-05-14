@@ -1,18 +1,19 @@
 package com.eugene.wc.protocol.api.keyexchange;
 
 import com.eugene.wc.protocol.api.data.WdfList;
+import com.eugene.wc.protocol.api.plugin.TransportId;
 
 public class TransportDescriptor {
 
-    private final String transportId;
+    private final TransportId transportId;
     private final WdfList properties;
 
-    public TransportDescriptor(String transportId, WdfList properties) {
+    public TransportDescriptor(TransportId transportId, WdfList properties) {
         this.transportId = transportId;
         this.properties = properties;
     }
 
-    public String getTransportId() {
+    public TransportId getTransportId() {
         return transportId;
     }
 

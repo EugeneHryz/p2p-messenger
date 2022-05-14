@@ -27,4 +27,7 @@
     <string name="open_drawer_desc">Open navigation drawer</string>
     <string name="close_drawer_desc">Close navigation drawer</string>
 
+    <string name="bluetooth_transport">Bluetooth</string>
+    <string name="wifi_transport">Wi-Fi</string>
+
 </resources>

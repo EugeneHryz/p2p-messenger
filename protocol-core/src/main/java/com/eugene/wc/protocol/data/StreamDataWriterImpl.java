@@ -4,6 +4,7 @@ import static com.eugene.wc.protocol.api.data.TypesDefinition.*;
 
 import com.eugene.wc.protocol.api.data.StreamDataWriter;
 import com.eugene.wc.protocol.api.data.WdfList;
+import com.eugene.wc.protocol.api.plugin.TransportId;
 
 import java.io.IOException;
 import java.io.OutputStream;

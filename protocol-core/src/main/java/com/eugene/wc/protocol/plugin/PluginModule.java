@@ -13,12 +13,12 @@ import dagger.Provides;
 @Module
 public class PluginModule {
 
-	public static class EagerSingletons {
-		@Inject
-		PluginManager pluginManager;
-		@Inject
-		Poller poller;
-	}
+//	public static class EagerSingletons {
+//		@Inject
+//		PluginManager pluginManager;
+//		@Inject
+//		Poller poller;
+//	}
 
 	@Provides
 	BackoffFactory provideBackoffFactory() {

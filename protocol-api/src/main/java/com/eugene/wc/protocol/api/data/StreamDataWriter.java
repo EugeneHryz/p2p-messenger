@@ -1,5 +1,6 @@
 package com.eugene.wc.protocol.api.data;
 
+
 import java.io.IOException;
 
 public interface StreamDataWriter {

@@ -1,5 +1,7 @@
 package com.eugene.wc.protocol.api.plugin.duplex;
 
+import com.eugene.wc.protocol.api.data.WdfList;
+import com.eugene.wc.protocol.api.keyexchange.KeyExchangeListener;
 import com.eugene.wc.protocol.api.plugin.Plugin;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
 
@@ -20,21 +22,19 @@ public interface DuplexPlugin extends Plugin {
 	 * Attempts to create and return a listener that can be used to perform key
 	 * agreement. Returns null if a listener cannot be created.
 	 */
-//	@Nullable
-//	KeyAgreementListener createKeyAgreementListener(byte[] localCommitment);
+	KeyExchangeListener createKeyExchangeListener(byte[] localCommitment);
 
 	/**
 	 * Attempts to connect to the remote peer specified in the given descriptor.
 	 * Returns null if no connection can be established.
 	 */
-//	@Nullable
-//	DuplexTransportConnection createKeyAgreementConnection(
-//			byte[] remoteCommitment, BdfList descriptor);
+	DuplexTransportConnection createKeyExchangeConnection(
+			byte[] remoteCommitment, WdfList descriptor);
 
 	/**
 	 * Returns true if the plugin supports rendezvous connections.
 	 */
-	boolean supportsRendezvous();
+//	boolean supportsRendezvous();
 
 	/**
 	 * Creates and returns an endpoint that uses the given key material to
