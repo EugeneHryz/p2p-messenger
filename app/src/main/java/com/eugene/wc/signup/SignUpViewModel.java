@@ -28,6 +28,7 @@ public class SignUpViewModel extends ViewModel {
     enum State {
         SET_NICKNAME,
         SET_PASSWORD,
+        CREATING,
         CREATED,
         FAILED
     }
@@ -54,6 +55,7 @@ public class SignUpViewModel extends ViewModel {
         }
         ioExecutor.execute(() -> {
             try {
+                state.postValue(State.CREATING);
                 accountManager.createAccount(nickname, password);
                 state.postValue(State.CREATED);
 

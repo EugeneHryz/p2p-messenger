@@ -55,7 +55,7 @@ public class StartupActivity extends BaseActivity {
             Log.d(TAG, "Successfully signed in :)");
             onSignedIn();
         } else {
-            Log.d(TAG, "Error while trying to log in");
+            Log.d(TAG, "Error while trying to sign in");
         }
     }
 

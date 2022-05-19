@@ -2,6 +2,7 @@ package com.eugene.wc.protocol.crypto;
 
 import com.eugene.wc.protocol.api.crypto.DHKeyExchange;
 import com.eugene.wc.protocol.api.crypto.KeyPair;
+import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.InvalidParameterException;
 
 import org.junit.Assert;
@@ -12,7 +13,7 @@ public class DHKeyExchangeTest {
     private final DHKeyExchange dhKeyExchange = new DHKeyExchangeImpl();
 
     @Test
-    public void dhKeyExchangeTest() throws InvalidParameterException {
+    public void dhKeyExchangeTest() throws CryptoException {
 
         KeyPair aliceKeyPair = dhKeyExchange.generateKeyPair();
         KeyPair bobKeyPair = dhKeyExchange.generateKeyPair();

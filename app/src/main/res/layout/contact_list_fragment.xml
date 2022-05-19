@@ -5,14 +5,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
 
-
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/add_contact_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
-        android:layout_marginBottom="@dimen/medium_margin"
-        android:layout_marginEnd="@dimen/medium_margin"
+        android:layout_marginBottom="@dimen/big_margin"
+        android:layout_marginEnd="@dimen/big_margin"
         app:srcCompat="@drawable/ic_person_add" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

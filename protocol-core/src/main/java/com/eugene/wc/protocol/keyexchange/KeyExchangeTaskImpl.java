@@ -4,27 +4,26 @@ import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.crypto.KeyExchangeCrypto;
 import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
-import com.eugene.wc.protocol.api.data.StreamDataWriter;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.keyexchange.ConnectionChooser;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeTask;
 import com.eugene.wc.protocol.api.keyexchange.Payload;
-import com.eugene.wc.protocol.api.keyexchange.PayloadEncoder;
 import com.eugene.wc.protocol.api.keyexchange.TransportDescriptor;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeAbortedEvent;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeListeningEvent;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeStartedEvent;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeStoppedListeningEvent;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeWaitingEvent;
 import com.eugene.wc.protocol.api.keyexchange.exception.AbortException;
-import com.eugene.wc.protocol.api.keyexchange.exception.EncodeException;
 import com.eugene.wc.protocol.api.keyexchange.exception.TransportException;
 import com.eugene.wc.protocol.api.plugin.PluginManager;
-import com.eugene.wc.protocol.api.plugin.TransportId;
-import com.eugene.wc.protocol.data.StreamDataWriterImpl;
 
-import java.io.ByteArrayOutputStream;
-import java.util.Arrays;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
 
-public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask {
+public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask,
+        KeyExchangeProtocol.Callback {
 
     private static final Logger logger = Logger.getLogger(KeyExchangeTaskImpl.class.getName());
 
@@ -59,17 +58,17 @@ public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask {
                 throw new AbortException("Unable to establish remote connection");
             }
 
-            KeyExchangeProtocol protocol = new KeyExchangeProtocol(transport, crypto, kec,
-                    localPayload, remotePayload, localKeyPair, isAlice);
+            KeyExchangeProtocol protocol = new KeyExchangeProtocol(this, transport, crypto,
+                    kec, localPayload, remotePayload, localKeyPair, isAlice);
             SecretKey sharedSecret = protocol.perform();
-
 
             // create KeyExchangeResult and broadcast corresponding event
         } catch (AbortException e) {
             logger.warning("Key Exchange task was aborted " + e);
-            // broadcast aborted event
+            eventBus.broadcast(new KeyExchangeAbortedEvent());
         } catch (TransportException e) {
             logger.warning("Unable to perform key exchange task " + e);
+            eventBus.broadcast(new KeyExchangeAbortedEvent());
         }
     }
 
@@ -80,28 +79,17 @@ public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask {
             localPayload = connector.listen(localKeyPair);
 
             logger.info("Received localPayload ");
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            StreamDataWriter writer = new StreamDataWriterImpl(baos);
-            PayloadEncoder payloadEncoder = new PayloadEncoderImpl(writer);
-
-            try {
-                payloadEncoder.encode(localPayload);
-            } catch (EncodeException e) {
-                e.printStackTrace();
-            }
-
-            logger.info(Arrays.toString(baos.toByteArray()));
-            eventBus.broadcast(new ReceivedLocalPayloadEvent(localPayload));
-
             for (TransportDescriptor td : localPayload.getDescriptors()) {
                 logger.info(td.getTransportId().toString());
             }
+            eventBus.broadcast(new KeyExchangeListeningEvent(localPayload));
         }
     }
 
     @Override
     public synchronized void stopListening() {
         connector.stopListening();
+        eventBus.broadcast(new KeyExchangeStoppedListeningEvent());
     }
 
     @Override
@@ -111,5 +99,15 @@ public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask {
         }
         this.remotePayload = remotePayload;
         start();
+    }
+
+    @Override
+    public void waiting() {
+        eventBus.broadcast(new KeyExchangeWaitingEvent());
+    }
+
+    @Override
+    public void started() {
+        eventBus.broadcast(new KeyExchangeStartedEvent());
     }
 }

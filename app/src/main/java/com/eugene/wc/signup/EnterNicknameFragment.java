@@ -57,6 +57,7 @@ public class EnterNicknameFragment extends BaseSignUpFragment implements TextWat
             nextButton.setEnabled(true);
         } else {
             textInputLayout.setError(getString(R.string.nickname_too_short));
+            nextButton.setEnabled(false);
         }
     }
 

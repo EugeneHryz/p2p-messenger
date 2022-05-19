@@ -2,6 +2,7 @@
 <resources>
 
     <dimen name="huge_text">32sp</dimen>
+    <dimen name="medium_text">20sp</dimen>
     <dimen name="fab_margin">15dp</dimen>
 
     <dimen name="activity_horizontal_margin">15dp</dimen>
@@ -10,8 +11,12 @@
     <dimen name="text_edit_padding">12dp</dimen>
 
     <dimen name="small_margin">6dp</dimen>
-    <dimen name="medium_margin">14dp</dimen>
+    <dimen name="medium_margin">10dp</dimen>
+    <dimen name="big_margin">16dp</dimen>
     <dimen name="button_padding">12dp</dimen>
 
     <dimen name="transport_icon_size">40dp</dimen>
+
+    <dimen name="progress_bar_corner_radius">8dp</dimen>
+    <dimen name="progress_bar_size">60dp</dimen>
 </resources>

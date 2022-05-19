@@ -6,6 +6,8 @@ import static java.util.logging.Logger.getLogger;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Logger;

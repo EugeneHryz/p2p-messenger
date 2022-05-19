@@ -6,6 +6,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 public class Payload implements Comparable<Payload> {
 
@@ -29,6 +30,29 @@ public class Payload implements Comparable<Payload> {
 
     public List<TransportDescriptor> getDescriptors() {
         return descriptors;
+    }
+
+    @Override
+    public String toString() {
+        return "Payload{" +
+                "commitment=" + Arrays.toString(commitment) +
+                ", descriptors=" + descriptors +
+                '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Payload payload = (Payload) o;
+        return Arrays.equals(commitment, payload.commitment) && Objects.equals(descriptors, payload.descriptors);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(descriptors);
+        result = 31 * result + Arrays.hashCode(commitment);
+        return result;
     }
 
     @Override

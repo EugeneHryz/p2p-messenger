@@ -17,4 +17,5 @@
     <color name="wc_red">#F44336</color>
 
     <color name="wc_gray">#8F919A</color>
+    <color name="wc_light_gray">#C1C1C2</color>
 </resources>

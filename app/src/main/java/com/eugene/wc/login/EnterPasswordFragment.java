@@ -82,7 +82,13 @@ public class EnterPasswordFragment extends BaseFragment implements TextWatcher {
 
     private void handleStateChange(State state) {
         if (state == State.SIGN_IN_FAILED) {
+            signInButton.setEnabled(true);
+            passwordInputLayout.setEnabled(true);
+
             passwordInputLayout.setError(getString(R.string.sign_in_failed));
+        } else if (state == State.SIGNING_IN) {
+            signInButton.setEnabled(false);
+            passwordInputLayout.setEnabled(false);
         }
     }
 

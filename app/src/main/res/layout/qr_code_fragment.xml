@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <com.eugene.wc.view.CameraView
+        android:id="@+id/camera_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:weightSum="2">
+
+        <View
+            android:layout_weight="1"
+            android:layout_height="0dp"
+            android:layout_width="match_parent"
+            android:visibility="invisible">
+        </View>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@android:color/white">
+
+            <ImageView
+                android:id="@+id/qr_code"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="@dimen/activity_horizontal_margin"
+                android:layout_gravity="center">
+
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/progress_bar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:indicatorSize="@dimen/progress_bar_size"
+                    android:layout_gravity="center_horizontal"
+                    android:indeterminate="true"
+                    android:visibility="invisible"
+                    app:trackCornerRadius="@dimen/progress_bar_corner_radius" />
+
+                <TextView
+                    android:id="@+id/status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/medium_margin"
+                    android:maxLines="5"
+                    android:textAlignment="center"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+
+        </FrameLayout>
+
+    </LinearLayout>
+</FrameLayout>

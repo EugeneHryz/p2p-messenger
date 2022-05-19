@@ -10,6 +10,7 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.widget.Toolbar;
@@ -52,6 +53,11 @@ public class HomeActivity extends BaseActivity {
     protected void injectActivity(ActivityComponent component) {
         component.inject(this);
         viewModel = new ViewModelProvider(this, viewModelFactory).get(HomeViewModel.class);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     @Override

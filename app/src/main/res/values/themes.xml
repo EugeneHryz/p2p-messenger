@@ -24,6 +24,11 @@
         <item name="android:textStyle">bold</item>
     </style>
 
+    <style name="MediumText">
+        <item name="android:textSize">@dimen/medium_text</item>
+        <item name="android:textColor">@android:color/tab_indicator_text</item>
+    </style>
+
     <style name="Theme.Messenger.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="Theme.Messenger.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />

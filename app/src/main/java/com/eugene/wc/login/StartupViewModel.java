@@ -28,6 +28,7 @@ public class StartupViewModel extends ViewModel {
 
     enum State {
         SIGN_IN_FAILED,
+        SIGNING_IN,
         SIGNED_IN,
         SIGNED_OUT
     }
@@ -52,6 +53,8 @@ public class StartupViewModel extends ViewModel {
     public void signIn(String password) {
         ioExecutor.execute(() -> {
             try {
+                state.postValue(State.SIGNING_IN);
+
                 accountManager.signIn(password);
                 state.postValue(State.SIGNED_IN);
 

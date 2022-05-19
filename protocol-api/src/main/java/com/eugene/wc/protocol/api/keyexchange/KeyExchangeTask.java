@@ -12,5 +12,4 @@ public interface KeyExchangeTask {
 
     // this needs to be called after scanning qr code of a remote peer
     void connectAndPerformKeyExchange(Payload remotePayload);
-
 }

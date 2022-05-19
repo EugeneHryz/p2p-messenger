@@ -3,6 +3,7 @@ package com.eugene.wc.viewmodel;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.eugene.wc.contact.add.AddContactViewModel;
 import com.eugene.wc.home.HomeViewModel;
 import com.eugene.wc.login.StartupViewModel;
 import com.eugene.wc.signup.SignUpActivity;
@@ -33,6 +34,11 @@ public abstract class ViewModelModule {
     @IntoMap
     @ClassKey(HomeViewModel.class)
     public abstract ViewModel bindHomeViewModel(HomeViewModel viewModel);
+
+    @Binds
+    @IntoMap
+    @ClassKey(AddContactViewModel.class)
+    public abstract ViewModel bindAddContactViewViewModel(AddContactViewModel viewModel);
 
     @Binds
     public abstract ViewModelProvider.Factory bindViewModelProvider(ViewModelFactory factory);

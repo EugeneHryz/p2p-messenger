@@ -6,10 +6,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <View
+        android:layout_height="1dp"
+        android:layout_width="match_parent"
+        android:background="@color/wc_light_gray" />
+
     <GridView
         android:id="@+id/transports_grid"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginVertical="@dimen/medium_margin"
         android:numColumns="3"
         tools:listitem="@layout/transport_list_item">
     </GridView>

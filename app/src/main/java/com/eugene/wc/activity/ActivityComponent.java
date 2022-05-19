@@ -2,6 +2,9 @@ package com.eugene.wc.activity;
 
 import com.eugene.wc.ApplicationComponent;
 import com.eugene.wc.contact.ContactListFragment;
+import com.eugene.wc.contact.add.AddContactActivity;
+import com.eugene.wc.contact.add.IntroFragment;
+import com.eugene.wc.contact.add.QrCodeFragment;
 import com.eugene.wc.home.HomeActivity;
 import com.eugene.wc.login.EnterPasswordFragment;
 import com.eugene.wc.login.StartupActivity;
@@ -25,6 +28,8 @@ public interface ActivityComponent {
 
     void inject(HomeActivity activity);
 
+    void inject(AddContactActivity activity);
+
 
     void inject(BaseSignUpFragment fragment);
 
@@ -35,4 +40,6 @@ public interface ActivityComponent {
     void inject(EnterPasswordFragment fragment);
 
     void inject(ContactListFragment fragment);
+
+    void inject(QrCodeFragment fragment);
 }

@@ -19,6 +19,13 @@ import java.util.logging.Logger;
 
 public class KeyExchangeProtocol {
 
+    interface Callback {
+
+        void waiting();
+
+        void started();
+    }
+
     private static final Logger logger = Logger.getLogger(KeyExchangeProtocol.class.getName());
 
     private final KeyExchangeTransport transport;
@@ -28,11 +35,14 @@ public class KeyExchangeProtocol {
     private final Payload localPayload, remotePayload;
     private final KeyPair localKeyPair;
 
+    private final Callback callback;
+
     private final boolean isAlice;
 
-    public KeyExchangeProtocol(KeyExchangeTransport transport, CryptoComponent crypto,
+    public KeyExchangeProtocol(Callback callback, KeyExchangeTransport transport, CryptoComponent crypto,
                                KeyExchangeCrypto kec, Payload local, Payload remote,
                                KeyPair localKeyPair, boolean isAlice) {
+        this.callback = callback;
         this.transport = transport;
         this.crypto = crypto;
         this.kec = kec;
@@ -50,9 +60,12 @@ public class KeyExchangeProtocol {
                 logger.info("Alice's own public key: " + Arrays.toString(localKeyPair
                         .getPublicKey().getBytes()));
                 sendPublicKey(localKeyPair.getPublicKey());
+
+                callback.waiting();
                 logger.info("Alice sent her public key and about to receive bob's key");
                 receivedKey = receivePublicKey();
             } else {
+                callback.waiting();
                 receivedKey = receivePublicKey();
                 logger.info("Bob received alice key's key and about to send his own");
                 logger.info("Alice's received key: " + Arrays.toString(receivedKey.getBytes()));
@@ -87,6 +100,7 @@ public class KeyExchangeProtocol {
             throw new AbortException("Our calculated commitment of received public key does " +
                     "not match with what we have scanned");
         }
+        callback.started();
         return new PublicKey(keyBytes);
     }
 

@@ -4,6 +4,7 @@
 
     <string name="enter_nickname_hint">Enter your nickname</string>
     <string name="next_btn">Next</string>
+    <string name="start_btn">Start</string>
     <string name="sign_in_btn">Sign in</string>
     <string name="nickname_too_short">Nickname must be at least 3 characters long</string>
     <string name="set_password_hint">Enter your password</string>
@@ -29,5 +30,7 @@
 
     <string name="bluetooth_transport">Bluetooth</string>
     <string name="wifi_transport">Wi-Fi</string>
+
+    <string name="add_contact_intro_message">In order to communicate with someone you both need to add each other to your contact lists.\nTo do this you need to meet in person with your peer and scan each other\'s qr codes.\n\nPlease, provide all necessary permissions</string>
 
 </resources>
