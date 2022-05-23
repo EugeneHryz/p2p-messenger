@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel;
 import com.eugene.wc.protocol.api.account.AccountManager;
 import com.eugene.wc.protocol.api.account.PasswordStrengthEstimator;
 import com.eugene.wc.protocol.api.account.PasswordStrengthEstimator.Strength;
+import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.EncryptionException;
 import com.eugene.wc.protocol.api.io.IoExecutor;
 
@@ -59,7 +60,7 @@ public class SignUpViewModel extends ViewModel {
                 accountManager.createAccount(nickname, password);
                 state.postValue(State.CREATED);
 
-            } catch (EncryptionException e) {
+            } catch (CryptoException e) {
                 Log.e(TAG, "Unable to create account", e);
                 state.postValue(State.FAILED);
             }

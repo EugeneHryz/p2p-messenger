@@ -42,17 +42,14 @@ public class QrCodeFragment extends BaseFragment {
 
     private Vibrator vibrator;
 
-    @Inject
-    ViewModelProvider.Factory viewModelFactory;
     private AddContactViewModel viewModel;
 
-    QrCodeDecoder qrCodeDecoder;
+    private QrCodeDecoder qrCodeDecoder;
 
     @Override
     protected void injectFragment(ActivityComponent activityComponent) {
-        activityComponent.inject(this);
-        viewModel = new ViewModelProvider(requireActivity(), viewModelFactory)
-                .get(AddContactViewModel.class);
+
+        viewModel = new ViewModelProvider(requireActivity()).get(AddContactViewModel.class);
         qrCodeDecoder = new QrCodeDecoder(viewModel);
     }
 

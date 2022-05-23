@@ -3,11 +3,14 @@ package com.eugene.wc.viewmodel;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.eugene.wc.contact.ContactListViewModel;
 import com.eugene.wc.contact.add.AddContactViewModel;
 import com.eugene.wc.home.HomeViewModel;
 import com.eugene.wc.login.StartupViewModel;
 import com.eugene.wc.signup.SignUpActivity;
 import com.eugene.wc.signup.SignUpViewModel;
+
+import javax.inject.Singleton;
 
 import dagger.Binds;
 import dagger.Module;
@@ -37,8 +40,14 @@ public abstract class ViewModelModule {
 
     @Binds
     @IntoMap
+    @Singleton
     @ClassKey(AddContactViewModel.class)
-    public abstract ViewModel bindAddContactViewViewModel(AddContactViewModel viewModel);
+    public abstract ViewModel bindAddContactViewModel(AddContactViewModel viewModel);
+
+    @Binds
+    @IntoMap
+    @ClassKey(ContactListViewModel.class)
+    public abstract ViewModel bindContactListViewModel(ContactListViewModel viewModel);
 
     @Binds
     public abstract ViewModelProvider.Factory bindViewModelProvider(ViewModelFactory factory);

@@ -12,16 +12,23 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
+import javax.inject.Inject;
+
 public class H2Database extends AbstractJdbcDatabase {
 
     private static final String STRING_TYPE = "VARCHAR";
     private static final String HASH_TYPE = "BINARY(32)";
-    private static final DatabaseTypes dbTypes = new DatabaseTypes(STRING_TYPE, HASH_TYPE);
+    private static final String BINARY_TYPE = "BINARY";
+    private static final String COUNTER_TYPE = "INTEGER NOT NULL AUTO_INCREMENT";
+
+    private static final DatabaseTypes dbTypes = new DatabaseTypes(STRING_TYPE, HASH_TYPE,
+            BINARY_TYPE, COUNTER_TYPE);
 
     private final DatabaseConfig dbConfig;
     private final String url;
     private SecretKey secretKey;
 
+    @Inject
     public H2Database(DatabaseConfig dbConfig) {
         super(dbTypes);
 
@@ -59,7 +66,7 @@ public class H2Database extends AbstractJdbcDatabase {
         try {
             super.closeAllConnections();
         } catch (SQLException e) {
-            logger.warning("Unable to close all connections");
+            logger.warning("Unable to close all connections " + e);
             throw new DbException("Unable to close all connections", e);
         }
     }

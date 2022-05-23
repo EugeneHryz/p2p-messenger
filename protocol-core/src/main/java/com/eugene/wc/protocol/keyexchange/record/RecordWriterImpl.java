@@ -23,12 +23,6 @@ public class RecordWriterImpl implements RecordWriter {
         output.write(content);
     }
 
-    private void writeInteger32(int value) throws IOException {
-        for (int i = 24; i >= 0; i -= 8) {
-            output.write(value >> i);
-        }
-    }
-
     @Override
     public void flush() throws IOException {
         output.flush();
@@ -37,5 +31,11 @@ public class RecordWriterImpl implements RecordWriter {
     @Override
     public void close() throws IOException {
         output.close();
+    }
+
+    private void writeInteger32(int value) throws IOException {
+        for (int i = 24; i >= 0; i -= 8) {
+            output.write(value >> i);
+        }
     }
 }

@@ -1,7 +1,8 @@
 package com.eugene.wc.protocol.api.settings;
 
-import com.eugene.wc.protocol.api.db.Transaction;
 import com.eugene.wc.protocol.api.db.exception.DbException;
+
+import java.sql.Connection;
 
 public interface SettingsManager {
 
@@ -13,7 +14,7 @@ public interface SettingsManager {
 	/**
 	 * Returns all settings in the given namespace.
 	 */
-	Settings getSettings(Transaction txn, String namespace) throws DbException;
+	Settings getSettings(Connection txn, String namespace) throws DbException;
 
 	/**
 	 * Merges the given settings with any existing settings in the given
@@ -25,6 +26,6 @@ public interface SettingsManager {
 	 * Merges the given settings with any existing settings in the given
 	 * namespace.
 	 */
-	void mergeSettings(Transaction txn, Settings s, String namespace)
+	void mergeSettings(Connection txn, Settings s, String namespace)
 			throws DbException;
 }

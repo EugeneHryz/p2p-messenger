@@ -1,6 +1,7 @@
 package com.eugene.wc.protocol.api.lifecycle;
 
 import com.eugene.wc.protocol.api.crypto.SecretKey;
+import com.eugene.wc.protocol.api.db.DatabaseOpenListener;
 
 import java.util.concurrent.ExecutorService;
 
@@ -23,6 +24,8 @@ public interface LifecycleManager {
     void registerService(Service service);
 
     void registerForShutdown(ExecutorService executorService);
+
+    void registerDatabaseOpenListener(DatabaseOpenListener l);
 
     StartResult startServices(SecretKey secretKey);
 

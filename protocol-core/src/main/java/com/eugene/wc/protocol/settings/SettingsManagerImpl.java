@@ -1,9 +1,10 @@
 package com.eugene.wc.protocol.settings;
 
-import com.eugene.wc.protocol.api.db.Transaction;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.settings.Settings;
 import com.eugene.wc.protocol.api.settings.SettingsManager;
+
+import java.sql.Connection;
 
 import javax.inject.Inject;
 
@@ -23,7 +24,7 @@ class SettingsManagerImpl implements SettingsManager {
 	}
 
 	@Override
-	public Settings getSettings(Transaction txn, String namespace) throws DbException {
+	public Settings getSettings(Connection txn, String namespace) throws DbException {
 //		return db.getSettings(txn, namespace);
 		return new Settings();
 	}
@@ -34,7 +35,7 @@ class SettingsManagerImpl implements SettingsManager {
 	}
 
 	@Override
-	public void mergeSettings(Transaction txn, Settings s, String namespace) throws DbException {
+	public void mergeSettings(Connection txn, Settings s, String namespace) throws DbException {
 //		db.mergeSettings(txn, s, namespace);
 	}
 }

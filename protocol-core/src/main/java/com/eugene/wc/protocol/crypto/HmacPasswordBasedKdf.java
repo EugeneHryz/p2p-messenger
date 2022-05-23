@@ -11,8 +11,7 @@ import javax.crypto.spec.PBEKeySpec;
 
 public class HmacPasswordBasedKdf implements PasswordBasedKdf {
 
-    private static final String ALGORITHM_NAME = "PBKDF2withHmacSHA1";
-    private static final String ANOTHER_ALGORITHM_NAME = "PBKDF2withHmacSHA1";
+    public static final String ALGORITHM_NAME = "PBKDF2withHmacSHA1";
 
     // output key length in bits (32 bytes)
     public static final int KEY_LENGTH = 256;
@@ -24,7 +23,7 @@ public class HmacPasswordBasedKdf implements PasswordBasedKdf {
 
         KeySpec spec = new PBEKeySpec(password, salt, ITERATION_COUNT, KEY_LENGTH);
         try {
-            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(ANOTHER_ALGORITHM_NAME);
+            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(ALGORITHM_NAME);
             return keyFactory.generateSecret(spec).getEncoded();
 
         } catch (GeneralSecurityException e) {

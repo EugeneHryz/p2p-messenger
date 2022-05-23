@@ -7,8 +7,8 @@ import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.ActionBar;
 import androidx.lifecycle.ViewModelProvider;
+import com.eugene.wc.contact.add.AddContactViewModel.State;
 
 import com.eugene.wc.R;
 import com.eugene.wc.activity.ActivityComponent;
@@ -36,6 +36,8 @@ public class AddContactActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.fragment_container);
+
+        viewModel.getState().observe(this, this::handleStateChange);
 
         showInitialFragment(new IntroFragment());
     }
@@ -67,4 +69,10 @@ public class AddContactActivity extends BaseActivity {
         return true;
     }
 
+    private void handleStateChange(State state) {
+        if (state == State.FINISHED) {
+            setResult(RESULT_OK);
+            supportFinishAfterTransition();
+        }
+    }
 }

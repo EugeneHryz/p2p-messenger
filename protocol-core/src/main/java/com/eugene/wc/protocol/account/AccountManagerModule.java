@@ -5,15 +5,18 @@ import com.eugene.wc.protocol.api.account.PasswordStrengthEstimator;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
 
+import javax.inject.Singleton;
+
 import dagger.Module;
 import dagger.Provides;
 
 @Module
 public class AccountManagerModule {
 
+    @Singleton
     @Provides
-    public AccountManager provideAccountManager(DatabaseConfig dbConfig, CryptoComponent crypto) {
-        return new AccountManagerImpl(dbConfig, crypto);
+    public AccountManager provideAccountManager(AccountManagerImpl accountManager) {
+        return accountManager;
     }
 
     @Provides

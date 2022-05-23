@@ -5,10 +5,13 @@ import androidx.lifecycle.ViewModelProvider;
 import com.eugene.wc.network.AndroidNetworkModule;
 import com.eugene.wc.protocol.ProtocolCoreModule;
 import com.eugene.wc.protocol.api.account.AccountManager;
+import com.eugene.wc.protocol.api.contact.ContactManager;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.crypto.CryptoExecutor;
+import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.DbExecutor;
 import com.eugene.wc.protocol.api.event.EventBus;
+import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.io.IoExecutor;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeTask;
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
@@ -36,9 +39,12 @@ import dagger.Component;
                         ClockModule.class})
 public interface ApplicationComponent extends AndroidEagerSingletons {
 
-    JdbcDatabase jdbcDatabase();
+    DatabaseComponent databaseComponent();
 
     AccountManager accountManager();
+
+//    IdentityManager identityManager();
+    ContactManager contactManager();
 
     CryptoComponent cryptoComponent();
 

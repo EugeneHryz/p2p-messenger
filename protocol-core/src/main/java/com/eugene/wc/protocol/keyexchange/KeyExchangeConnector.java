@@ -1,10 +1,8 @@
 package com.eugene.wc.protocol.keyexchange;
 
 import static com.eugene.wc.protocol.api.keyexchange.KeyAgreementConstants.CONNECTION_TIMEOUT;
-import static com.eugene.wc.protocol.api.util.LogUtils.logException;
 import static java.util.Arrays.asList;
 import static java.util.logging.Level.INFO;
-import static java.util.logging.Level.WARNING;
 
 import com.eugene.wc.protocol.api.Pair;
 import com.eugene.wc.protocol.api.crypto.KeyExchangeCrypto;
@@ -15,7 +13,6 @@ import com.eugene.wc.protocol.api.keyexchange.KeyExchangeConnection;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeListener;
 import com.eugene.wc.protocol.api.keyexchange.Payload;
 import com.eugene.wc.protocol.api.keyexchange.TransportDescriptor;
-import com.eugene.wc.protocol.api.keyexchange.exception.TransportException;
 import com.eugene.wc.protocol.api.plugin.BluetoothConstants;
 import com.eugene.wc.protocol.api.plugin.LanTcpConstants;
 import com.eugene.wc.protocol.api.plugin.Plugin;
@@ -24,7 +21,6 @@ import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPlugin;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;

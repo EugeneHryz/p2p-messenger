@@ -6,6 +6,10 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.eugene.wc.protocol.api.contact.ContactManager;
+import com.eugene.wc.protocol.api.contact.event.ContactExchangeFailedEvent;
+import com.eugene.wc.protocol.api.contact.event.ContactExchangeFinishedEvent;
+import com.eugene.wc.protocol.api.contact.exchange.ContactExchangeManager;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.data.StreamDataReader;
@@ -13,16 +17,21 @@ import com.eugene.wc.protocol.api.data.StreamDataWriter;
 import com.eugene.wc.protocol.api.event.Event;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.event.EventListener;
+import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.io.IoExecutor;
+import com.eugene.wc.protocol.api.keyexchange.KeyExchangeResult;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeTask;
 import com.eugene.wc.protocol.api.keyexchange.Payload;
 import com.eugene.wc.protocol.api.keyexchange.PayloadDecoder;
 import com.eugene.wc.protocol.api.keyexchange.PayloadEncoder;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeAbortedEvent;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeFinishedEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeListeningEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeStartedEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeWaitingEvent;
 import com.eugene.wc.protocol.api.keyexchange.exception.DecodeException;
 import com.eugene.wc.protocol.api.keyexchange.exception.EncodeException;
+import com.eugene.wc.protocol.contact.exchange.ContactExchangeManagerImpl;
 import com.eugene.wc.protocol.data.StreamDataReaderImpl;
 import com.eugene.wc.protocol.data.StreamDataWriterImpl;
 import com.eugene.wc.protocol.keyexchange.PayloadDecoderImpl;
@@ -51,12 +60,14 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
         WAITING,
         STARTED,
         FINISHED,
-        ABORTED
+        FAILED
     }
 
+    private final IdentityManager identityManager;
     private final CryptoComponent crypto;
     private final EventBus eventBus;
     private final Executor ioExecutor;
+    private final ContactManager contactManager;
 
     private final KeyExchangeTask ket;
 
@@ -67,13 +78,22 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
 
     @Inject
     public AddContactViewModel(CryptoComponent crypto, EventBus eventBus,
-                               @IoExecutor Executor ioExecutor, KeyExchangeTask ket) {
+                               @IoExecutor Executor ioExecutor, KeyExchangeTask ket,
+                               IdentityManager identityManager, ContactManager contactManager) {
+        this.identityManager = identityManager;
         this.crypto = crypto;
+        this.contactManager = contactManager;
         this.eventBus = eventBus;
         this.ioExecutor = ioExecutor;
         this.ket = ket;
 
+        Log.d(TAG, "Registering me as a listener");
         eventBus.addListener(this);
+    }
+
+    @Override
+    protected void onCleared() {
+        eventBus.removeListener(this);
     }
 
     @Override
@@ -96,6 +116,18 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
             state.postValue(State.STARTED);
         } else if (e instanceof KeyExchangeWaitingEvent) {
             state.postValue(State.WAITING);
+        } else if (e instanceof KeyExchangeFinishedEvent) {
+            KeyExchangeFinishedEvent event = (KeyExchangeFinishedEvent) e;
+
+            Log.d(TAG, "Starting contact exchange...");
+            startContactExchange(event.getResult());
+        } else if (e instanceof ContactExchangeFinishedEvent) {
+            state.postValue(State.FINISHED);
+
+        } else if (e instanceof KeyExchangeAbortedEvent) {
+            state.postValue(State.FAILED);
+        } else if (e instanceof ContactExchangeFailedEvent) {
+            state.postValue(State.FAILED);
         }
     }
 
@@ -126,6 +158,20 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
             ket.listen(ephemeralKeyPair);
             state.postValue(State.LISTENING);
         });
+    }
+
+    public LiveData<State> getState() {
+        return state;
+    }
+
+    public LiveData<String> getEncodedLocalPayload() {
+        return encodedPayload;
+    }
+
+    private void startContactExchange(KeyExchangeResult result) {
+        ContactExchangeManager cem = new ContactExchangeManagerImpl(result, identityManager,
+                crypto, eventBus, contactManager);
+        cem.startContactExchange();
     }
 
     private String encodePayload(Payload payload) throws EncodeException,
@@ -163,13 +209,5 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
                 Log.w(TAG, "Unable to close StreamDataReader while decoding payload", e);
             }
         }
-    }
-
-    public LiveData<State> getState() {
-        return state;
-    }
-
-    public LiveData<String> getEncodedLocalPayload() {
-        return encodedPayload;
     }
 }

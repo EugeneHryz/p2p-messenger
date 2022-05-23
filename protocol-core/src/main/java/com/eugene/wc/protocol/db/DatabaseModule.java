@@ -1,5 +1,6 @@
 package com.eugene.wc.protocol.db;
 
+import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
 import com.eugene.wc.protocol.api.db.DbExecutor;
 
@@ -19,12 +20,12 @@ import dagger.Provides;
 @Module
 public class DatabaseModule {
 
-    private final ExecutorService databaseExecutor;
+    private final ExecutorService dbExecutor;
 
     public DatabaseModule() {
         RejectedExecutionHandler reh = new ThreadPoolExecutor.DiscardPolicy();
         BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
-        databaseExecutor = new ThreadPoolExecutor(0, 1, 60,
+        dbExecutor = new ThreadPoolExecutor(0, 1, 60,
                 TimeUnit.SECONDS, taskQueue, reh);
     }
 
@@ -36,8 +37,14 @@ public class DatabaseModule {
 
     @Singleton
     @Provides
+    public DatabaseComponent provideDatabaseComponent(DatabaseComponentImpl dbComponent) {
+        return dbComponent;
+    }
+
+    @Singleton
+    @Provides
     @DbExecutor
     public Executor provideDbExecutor() {
-        return databaseExecutor;
+        return dbExecutor;
     }
 }

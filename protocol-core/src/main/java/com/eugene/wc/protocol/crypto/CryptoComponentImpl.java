@@ -7,14 +7,17 @@ import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.crypto.PasswordBasedKdf;
 import com.eugene.wc.protocol.api.crypto.PublicKey;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
+import com.eugene.wc.protocol.api.crypto.Signature;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.DecryptionException;
 import com.eugene.wc.protocol.api.crypto.exception.EncryptionException;
 import com.eugene.wc.protocol.api.crypto.exception.InvalidParameterException;
+import com.eugene.wc.protocol.api.util.ByteUtils;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.bouncycastle.crypto.Digest;
+import org.bouncycastle.crypto.digests.Blake2bDigest;
 
-import java.security.KeyPairGenerator;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
@@ -25,19 +28,22 @@ import javax.inject.Inject;
 public class CryptoComponentImpl implements CryptoComponent {
 
     private static final int SALT_LENGTH = 32;
+    private static final int MAC_LENGTH = 32;
 
     private final AuthenticatedCipher authCipher;
     private final PasswordBasedKdf pbKdf;
     private final DHKeyExchange dhKeyExchange;
+    private final Signature signature;
 
     private final SecureRandom secureRandom;
 
     @Inject
     public CryptoComponentImpl(AuthenticatedCipher authCipher, PasswordBasedKdf pbKdf,
-                               DHKeyExchange dhKeyExchange) {
+                               DHKeyExchange dhKeyExchange, Signature signature) {
         this.authCipher = authCipher;
         this.pbKdf = pbKdf;
         this.dhKeyExchange = dhKeyExchange;
+        this.signature = signature;
 
         secureRandom = new SecureRandom();
     }
@@ -50,7 +56,7 @@ public class CryptoComponentImpl implements CryptoComponent {
     }
 
     @Override
-    public byte[] encryptWithPassword(byte[] plaintext, char[] password) {
+    public byte[] encryptWithPassword(byte[] plaintext, char[] password) throws CryptoException {
         byte[] salt = new byte[SALT_LENGTH];
         secureRandom.nextBytes(salt);
 
@@ -60,14 +66,15 @@ public class CryptoComponentImpl implements CryptoComponent {
 
         try {
             byte[] derivedKeyFromPassword = pbKdf.deriveKey(password, salt);
-            SecretKeySpec masterKey = new SecretKeySpec(derivedKeyFromPassword, "AES");
+            SecretKeySpec masterKey = new SecretKeySpec(derivedKeyFromPassword,
+                    HmacPasswordBasedKdf.ALGORITHM_NAME);
 
             authCipher.init(masterKey);
             byte[] ciphertext = authCipher.encrypt(plaintext, ivSpec);
             return ArrayUtils.addAll(salt, ciphertext);
 
         } catch (InvalidParameterException | EncryptionException e) {
-            throw new RuntimeException("Error while encrypting data", e);
+            throw new CryptoException("Error while encrypting data", e);
         }
     }
 
@@ -78,7 +85,7 @@ public class CryptoComponentImpl implements CryptoComponent {
 
         try {
             byte[] keyBytes = pbKdf.deriveKey(password, salt);
-            SecretKeySpec secretKey = new SecretKeySpec(keyBytes, "AES");
+            SecretKeySpec secretKey = new SecretKeySpec(keyBytes, HmacPasswordBasedKdf.ALGORITHM_NAME);
 
             authCipher.init(secretKey);
             return authCipher.decrypt(bytesToDecrypt);
@@ -99,5 +106,70 @@ public class CryptoComponentImpl implements CryptoComponent {
 
         byte[] sharedSecret = dhKeyExchange.deriveSharedSecret(localKeyPair, remoteKey);
         return new SecretKey(sharedSecret);
+    }
+
+    @Override
+    public KeyPair generateSignatureKeyPair() {
+        return signature.generateSignatureKeyPair();
+    }
+
+    @Override
+    public byte[] mac(SecretKey secretKey, String namespace, byte[]... inputs) {
+        Digest mac = new Blake2bDigest(secretKey.getBytes(), MAC_LENGTH, null, null);
+
+        if (namespace != null) {
+            byte[] namespaceLength = new byte[ByteUtils.INT_32_BYTES];
+            ByteUtils.writeUint32(namespace.length(), namespaceLength, 0);
+            mac.update(namespaceLength, 0, namespaceLength.length);
+        }
+
+        for (byte[] input : inputs) {
+            byte[] lengthArray = new byte[ByteUtils.INT_32_BYTES];
+            ByteUtils.writeUint32(input.length, lengthArray, 0);
+
+            mac.update(lengthArray, 0, lengthArray.length);
+            mac.update(input, 0, input.length);
+        }
+        byte[] digest = new byte[MAC_LENGTH];
+        mac.doFinal(digest, 0);
+        return digest;
+    }
+
+    @Override
+    public SecretKey deriveKey(SecretKey secretKey, String namespace, byte[]... inputs) {
+        return new SecretKey(mac(secretKey, namespace, inputs));
+    }
+
+    @Override
+    public byte[] encryptWithKey(SecretKey key, byte[] plaintext) throws CryptoException {
+
+        byte[] ivBytes = new byte[AesHmacAuthenticatedCipher.IV_LENGTH];
+        secureRandom.nextBytes(ivBytes);
+        IvParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+
+        try {
+            SecretKeySpec masterKey = new SecretKeySpec(key.getBytes(),
+                    DHKeyExchangeImpl.ALGORITHM_NAME);
+
+            authCipher.init(masterKey);
+            byte[] ciphertext = authCipher.encrypt(plaintext, ivSpec);
+            return ciphertext;
+
+        } catch (InvalidParameterException | EncryptionException e) {
+            throw new CryptoException("Unable to encrypt data", e);
+        }
+    }
+
+    @Override
+    public byte[] decryptWithKey(SecretKey key, byte[] ciphertext) throws DecryptionException {
+        SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(), DHKeyExchangeImpl.ALGORITHM_NAME);
+        authCipher.init(secretKey);
+
+        try {
+            return authCipher.decrypt(ciphertext);
+
+        } catch (InvalidParameterException e) {
+            throw new DecryptionException("Unable to decrypt data", e);
+        }
     }
 }

@@ -1,10 +1,9 @@
 package com.eugene.wc.protocol.keyexchange;
 
 import com.eugene.wc.protocol.api.Predicate;
-import com.eugene.wc.protocol.api.crypto.PublicKey;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeConnection;
 import com.eugene.wc.protocol.api.keyexchange.exception.AbortException;
-import com.eugene.wc.protocol.api.keyexchange.exception.TransportException;
+import com.eugene.wc.protocol.api.transport.exception.TransportException;
 import com.eugene.wc.protocol.api.keyexchange.record.Record;
 import com.eugene.wc.protocol.api.keyexchange.record.RecordReader;
 import com.eugene.wc.protocol.api.keyexchange.record.RecordWriter;
@@ -25,8 +24,10 @@ public class KeyExchangeTransport {
 
     private RecordWriter recordWriter;
     private RecordReader recordReader;
+    private final KeyExchangeConnection connection;
 
     public KeyExchangeTransport(KeyExchangeConnection kec) {
+        connection = kec;
         try {
             InputStream inputStream = kec.getConnection().getReader().getInputStream();
             OutputStream outputStream = kec.getConnection().getWriter().getOutputStream();
@@ -73,5 +74,9 @@ public class KeyExchangeTransport {
             logger.warning(e.toString());
             throw new TransportException("Unable to send abort record");
         }
+    }
+
+    public KeyExchangeConnection getConnection() {
+        return connection;
     }
 }

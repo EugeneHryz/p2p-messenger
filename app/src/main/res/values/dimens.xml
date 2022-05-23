@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <dimen name="splash_image_size">240dp</dimen>
+    <dimen name="empty_list_icon_size">160dp</dimen>
+
     <dimen name="huge_text">32sp</dimen>
     <dimen name="medium_text">20sp</dimen>
     <dimen name="fab_margin">15dp</dimen>
@@ -19,4 +22,5 @@
 
     <dimen name="progress_bar_corner_radius">8dp</dimen>
     <dimen name="progress_bar_size">60dp</dimen>
+    <dimen name="fab_corner_radius">8dp</dimen>
 </resources>

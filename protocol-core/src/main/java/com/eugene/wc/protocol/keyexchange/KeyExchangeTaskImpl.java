@@ -6,16 +6,18 @@ import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.keyexchange.ConnectionChooser;
+import com.eugene.wc.protocol.api.keyexchange.KeyExchangeResult;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeTask;
 import com.eugene.wc.protocol.api.keyexchange.Payload;
 import com.eugene.wc.protocol.api.keyexchange.TransportDescriptor;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeAbortedEvent;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeFinishedEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeListeningEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeStartedEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeStoppedListeningEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeWaitingEvent;
 import com.eugene.wc.protocol.api.keyexchange.exception.AbortException;
-import com.eugene.wc.protocol.api.keyexchange.exception.TransportException;
+import com.eugene.wc.protocol.api.transport.exception.TransportException;
 import com.eugene.wc.protocol.api.plugin.PluginManager;
 
 import java.util.logging.Logger;
@@ -53,7 +55,6 @@ public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask,
 
         try {
             KeyExchangeTransport transport = connector.connect(remotePayload, isAlice);
-            logger.info("RECEIVED KeyExchangeTransport!!!");
             if (transport == null) {
                 throw new AbortException("Unable to establish remote connection");
             }
@@ -62,7 +63,11 @@ public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask,
                     kec, localPayload, remotePayload, localKeyPair, isAlice);
             SecretKey sharedSecret = protocol.perform();
 
-            // create KeyExchangeResult and broadcast corresponding event
+            KeyExchangeResult result = new KeyExchangeResult(isAlice, transport.getConnection(),
+                    sharedSecret);
+            logger.info("About to broadcast KeyExchangeFinishedEvent...");
+            eventBus.broadcast(new KeyExchangeFinishedEvent(result));
+
         } catch (AbortException e) {
             logger.warning("Key Exchange task was aborted " + e);
             eventBus.broadcast(new KeyExchangeAbortedEvent());

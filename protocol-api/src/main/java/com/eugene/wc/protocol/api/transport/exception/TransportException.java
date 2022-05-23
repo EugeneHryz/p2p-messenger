@@ -1,4 +1,4 @@
-package com.eugene.wc.protocol.api.keyexchange.exception;
+package com.eugene.wc.protocol.api.transport.exception;
 
 import java.io.IOException;
 

@@ -6,13 +6,10 @@ import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.crypto.PublicKey;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
-import com.eugene.wc.protocol.api.crypto.exception.InvalidParameterException;
 import com.eugene.wc.protocol.api.keyexchange.Payload;
 import com.eugene.wc.protocol.api.keyexchange.exception.AbortException;
-import com.eugene.wc.protocol.api.keyexchange.exception.TransportException;
+import com.eugene.wc.protocol.api.transport.exception.TransportException;
 import com.eugene.wc.protocol.api.util.ArrayUtil;
-
-import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Arrays;
 import java.util.logging.Logger;

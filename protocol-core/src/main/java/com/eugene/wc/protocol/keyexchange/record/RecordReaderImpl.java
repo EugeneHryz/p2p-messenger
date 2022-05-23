@@ -47,6 +47,11 @@ public class RecordReaderImpl implements RecordReader {
         return new Record(type, content);
     }
 
+    @Override
+    public void close() throws IOException {
+        input.close();
+    }
+
     private int readInteger32() throws IOException {
         int value = 0;
         for (int i = 24; i >= 0; i -= 8) {
@@ -62,10 +67,5 @@ public class RecordReaderImpl implements RecordReader {
         eof = input.read() == -1;
         input.reset();
         return eof;
-    }
-
-    @Override
-    public void close() throws IOException {
-        input.close();
     }
 }

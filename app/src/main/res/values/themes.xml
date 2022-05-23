@@ -32,4 +32,5 @@
     <style name="Theme.Messenger.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="Theme.Messenger.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
 </resources>

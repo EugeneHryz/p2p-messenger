@@ -8,6 +8,7 @@ import com.eugene.wc.protocol.api.crypto.CryptoExecutor;
 import com.eugene.wc.protocol.api.crypto.DHKeyExchange;
 import com.eugene.wc.protocol.api.crypto.KeyExchangeCrypto;
 import com.eugene.wc.protocol.api.crypto.PasswordBasedKdf;
+import com.eugene.wc.protocol.api.crypto.Signature;
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
 
 import java.util.concurrent.BlockingQueue;
@@ -61,12 +62,15 @@ public class CryptoModule {
         return new DHKeyExchangeImpl();
     }
 
+    @Provides
+    public Signature provideSignature() {
+        return new ECDSASignature();
+    }
+
     @Singleton
     @Provides
-    public CryptoComponent provideCryptoComponent(AuthenticatedCipher authCipher,
-                                                  PasswordBasedKdf pbkdf,
-                                                  DHKeyExchange dhKeyExchange) {
-        return new CryptoComponentImpl(authCipher, pbkdf, dhKeyExchange);
+    public CryptoComponent provideCryptoComponent(CryptoComponentImpl crypto) {
+        return crypto;
     }
 
     @Provides

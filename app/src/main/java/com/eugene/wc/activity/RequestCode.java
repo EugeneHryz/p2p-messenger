@@ -9,4 +9,6 @@ public final class RequestCode {
     public static final int REQUEST_PERMISSIONS = 2;
 
     public static final int REQUEST_DISCOVERABLE = 3;
+
+    public static final int ADD_NEW_CONTACT = 4;
 }

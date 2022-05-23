@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">WaveCrest</string>
     <string name="title_activity_main">MainActivity</string>
+    <string name="add_contact_activity_name">Add contact</string>
 
     <string name="enter_nickname_hint">Enter your nickname</string>
     <string name="next_btn">Next</string>
@@ -33,4 +34,5 @@
 
     <string name="add_contact_intro_message">In order to communicate with someone you both need to add each other to your contact lists.\nTo do this you need to meet in person with your peer and scan each other\'s qr codes.\n\nPlease, provide all necessary permissions</string>
 
+    <string name="no_contacts_description">You haven\'t added any contacts yet</string>
 </resources>

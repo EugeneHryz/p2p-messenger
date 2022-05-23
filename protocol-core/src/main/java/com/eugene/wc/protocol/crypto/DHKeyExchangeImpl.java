@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 public class DHKeyExchangeImpl implements DHKeyExchange {
 
-    private static final Logger logger = Logger.getLogger(DHKeyExchangeImpl.class.getName());
+    public static final String ALGORITHM_NAME = "ECDH";
 
     private final Curve25519 curve25519;
 

@@ -2,11 +2,16 @@ package com.eugene.wc.protocol.account;
 
 import com.eugene.wc.protocol.api.account.AccountManager;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
+import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
+import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.DecryptionException;
 import com.eugene.wc.protocol.api.crypto.exception.EncryptionException;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
+import com.eugene.wc.protocol.api.identity.Identity;
+import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.util.StringUtils;
+import com.eugene.wc.protocol.identity.IdentityManagerImpl;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -15,22 +20,30 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.logging.Logger;
 
 import javax.inject.Inject;
 
 public class AccountManagerImpl implements AccountManager {
 
+    private static final Logger logger = Logger.getLogger(AccountManagerImpl.class.getName());
+
     private static final String DB_KEY_FILENAME = "db.key";
 
-    private DatabaseConfig dbConfig;
-    private CryptoComponent cryptoComponent;
+    private final DatabaseConfig dbConfig;
+    private final CryptoComponent cryptoComponent;
+    private final IdentityManager identityManager;
+
     private File dbFeyFile;
 
     private SecretKey secretKey;
 
-    public AccountManagerImpl(DatabaseConfig dbConfig, CryptoComponent crypto) {
+    @Inject
+    public AccountManagerImpl(DatabaseConfig dbConfig, CryptoComponent crypto,
+                              IdentityManager identityManager) {
         this.dbConfig = dbConfig;
         cryptoComponent = crypto;
+        this.identityManager = identityManager;
 
         dbFeyFile = new File(dbConfig.getDatabaseKeyDirectory(), DB_KEY_FILENAME);
     }
@@ -41,8 +54,12 @@ public class AccountManagerImpl implements AccountManager {
     }
 
     @Override
-    public void createAccount(String nickname, String password) throws EncryptionException {
-        // todo: create account in the database
+    public void createAccount(String nickname, String password) throws CryptoException {
+        logger.info("Creating identity...");
+        KeyPair keyPair = cryptoComponent.generateSignatureKeyPair();
+        Identity identity = new Identity(keyPair.getPublicKey(), keyPair.getPrivateKey(), nickname);
+        logger.info("Storing identity...");
+        identityManager.storeIdentity(identity);
 
         SecretKey secretKey = cryptoComponent.generateSecretKey();
         encryptAndStoreDatabaseKey(secretKey, password);
@@ -76,7 +93,7 @@ public class AccountManagerImpl implements AccountManager {
         return actualKey;
     }
 
-    private void encryptAndStoreDatabaseKey(SecretKey secretKey, String password) throws EncryptionException {
+    private void encryptAndStoreDatabaseKey(SecretKey secretKey, String password) throws CryptoException {
         byte[] encryptedSecretKey = cryptoComponent.encryptWithPassword(secretKey.getBytes(),
                 password.toCharArray());
 

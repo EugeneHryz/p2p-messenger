@@ -1,6 +1,8 @@
 package com.eugene.wc.protocol.lifecycle;
 
 import com.eugene.wc.protocol.api.crypto.SecretKey;
+import com.eugene.wc.protocol.api.db.DatabaseComponent;
+import com.eugene.wc.protocol.api.db.DatabaseOpenListener;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
@@ -9,6 +11,7 @@ import com.eugene.wc.protocol.api.lifecycle.event.LifecycleStateEvent;
 import com.eugene.wc.protocol.api.lifecycle.exception.ServiceException;
 import com.eugene.wc.protocol.db.JdbcDatabase;
 
+import java.sql.Connection;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -23,8 +26,9 @@ public class LifecycleManagerImpl implements LifecycleManager {
 
     private final EventBus eventBus;
     private final List<Service> services;
+    private final List<DatabaseOpenListener> dbOpenListeners;
     private final List<ExecutorService> executorServices;
-    private final JdbcDatabase databaseComponent;
+    private final DatabaseComponent dbComponent;
 
     private final CountDownLatch dbLatch = new CountDownLatch(1);
     private final CountDownLatch servicesLatch = new CountDownLatch(1);
@@ -33,11 +37,12 @@ public class LifecycleManagerImpl implements LifecycleManager {
     private volatile State state = State.STARTING;
 
     @Inject
-    public LifecycleManagerImpl(EventBus eventBus, JdbcDatabase databaseComponent) {
+    public LifecycleManagerImpl(EventBus eventBus, DatabaseComponent dbComponent) {
         this.eventBus = eventBus;
-        this.databaseComponent = databaseComponent;
+        this.dbComponent = dbComponent;
 
         services = new CopyOnWriteArrayList<>();
+        dbOpenListeners = new CopyOnWriteArrayList<>();
         executorServices = new CopyOnWriteArrayList<>();
     }
 
@@ -47,18 +52,29 @@ public class LifecycleManagerImpl implements LifecycleManager {
     }
 
     @Override
+    public void registerDatabaseOpenListener(DatabaseOpenListener l) {
+        dbOpenListeners.add(l);
+    }
+
+    @Override
     public void registerForShutdown(ExecutorService executorService) {
         executorServices.add(executorService);
     }
 
     @Override
     public StartResult startServices(SecretKey secretKey) {
-
         logger.info("Opening database...");
         eventBus.broadcast(new LifecycleStateEvent(state));
 
         try {
-            databaseComponent.open(secretKey);
+            dbComponent.open(secretKey);
+
+            // notify all database open listeners
+            dbComponent.runInTransaction(false, (txn) -> {
+                for (DatabaseOpenListener l : dbOpenListeners) {
+                    l.onDatabaseOpened(txn);
+                }
+            });
         } catch (DbException e) {
             logger.warning("Unable to open the database " + e);
             return StartResult.DB_ERROR;
@@ -101,7 +117,7 @@ public class LifecycleManagerImpl implements LifecycleManager {
             es.shutdownNow();
         }
         try {
-            databaseComponent.close();
+            dbComponent.close();
         } catch (DbException e) {
             logger.warning("Failed to close the database " + e);
         }
