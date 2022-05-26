@@ -1,16 +1,31 @@
 package com.eugene.wc.protocol.db;
 
+import static com.eugene.wc.protocol.api.sync.validation.MessageState.DELIVERED;
+
 import com.eugene.wc.protocol.api.contact.Contact;
+import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.exception.ContactAlreadyExistsException;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.DbCallable;
 import com.eugene.wc.protocol.api.db.DbRunnable;
 import com.eugene.wc.protocol.api.db.exception.DbException;
+import com.eugene.wc.protocol.api.db.exception.NoSuchContactException;
+import com.eugene.wc.protocol.api.db.exception.NoSuchGroupException;
+import com.eugene.wc.protocol.api.db.exception.NoSuchMessageException;
 import com.eugene.wc.protocol.api.identity.Identity;
+import com.eugene.wc.protocol.api.identity.IdentityId;
+import com.eugene.wc.protocol.api.identity.LocalIdentity;
+import com.eugene.wc.protocol.api.sync.Group;
+import com.eugene.wc.protocol.api.sync.GroupId;
+import com.eugene.wc.protocol.api.sync.Message;
+import com.eugene.wc.protocol.api.sync.MessageId;
+import com.eugene.wc.protocol.api.sync.Metadata;
 
 import java.sql.Connection;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
@@ -52,39 +67,141 @@ public class DatabaseComponentImpl implements DatabaseComponent {
     }
 
     @Override
-    public void createIdentity(Connection txn, Identity identity) throws DbException {
-        db.createIdentity(txn, identity);
+    public void createLocalIdentity(Connection txn, LocalIdentity local) throws DbException {
+        db.createLocalIdentity(txn, local);
     }
 
     @Override
-    public Identity getIdentity(Connection txn) throws DbException {
-        return db.getIdentity(txn);
-    }
-
-    @Override
-    public boolean createContact(Connection txn, Contact contact) throws DbException,
-            ContactAlreadyExistsException {
-        boolean alreadyExists = db.containsContact(txn, contact);
-        boolean created = false;
-        if (!alreadyExists) {
-            int generatedId = db.createContact(txn, contact);
-
-            if (generatedId != -1) {
-                contact.setId(generatedId);
-                created = true;
-            }
-        } else {
-            logger.warning("Contact with given name and public key already exists");
-            throw new ContactAlreadyExistsException("Contact with given name and " +
-                    "public key already exists");
+    public LocalIdentity getLocalIdentity(Connection txn) throws DbException {
+        List<LocalIdentity> localIdentities = db.getAllLocalIdentities(txn);
+        if (localIdentities.size() != 1) {
+            throw new DbException();
         }
-        return created;
+        return localIdentities.get(0);
+    }
+
+    @Override
+    public boolean containsGroup(Connection txn, GroupId g) throws DbException {
+        return db.containsGroup(txn, g);
+    }
+
+    @Override
+    public void addGroup(Connection txn, Group g) throws DbException {
+        if (!db.containsGroup(txn, g.getId())) {
+            db.addGroup(txn, g);
+            // fixme: groupAdded event removed
+        }
+    }
+
+    @Override
+    public void removeGroup(Connection txn, Group g) throws DbException {
+        GroupId id = g.getId();
+        if (!db.containsGroup(txn, id))
+            throw new NoSuchGroupException();
+//        Collection<ContactId> affected = db.getGroupVisibility(txn, id).keySet();
+        db.removeGroup(txn, id);
+
+        // fixme: removed events
+//        transaction.attach(new GroupRemovedEvent(g));
+//        transaction.attach(new GroupVisibilityUpdatedEvent(affected));
+    }
+
+    @Override
+    public Contact getContact(Connection txn, IdentityId id) throws DbException {
+        return db.getContact(txn, id);
+    }
+
+    @Override
+    public Contact getContactById(Connection txn, ContactId contactId) throws DbException {
+        return db.getContactById(txn, contactId);
+    }
+
+    @Override
+    public ContactId createContact(Connection txn, Identity remote, IdentityId localId) throws DbException,
+            ContactAlreadyExistsException {
+        boolean alreadyExists = db.containsContact(txn, remote.getId(), localId);
+        if (!alreadyExists) {
+            ContactId generatedId = db.createContact(txn, remote, localId);
+
+            return generatedId;
+        } else {
+            logger.warning("Contact already exists");
+            throw new ContactAlreadyExistsException("Contact already exists");
+        }
     }
 
     @Override
     public List<Contact> getAllContacts(Connection txn) throws DbException {
         return db.getAllContacts(txn);
     }
+
+    @Override
+    public Message getMessage(Connection txn, MessageId m) throws DbException {
+        if (!db.containsMessage(txn, m))
+            throw new NoSuchMessageException();
+        return db.getMessage(txn, m);
+    }
+
+    @Override
+    public void removeMessage(Connection txn, MessageId m)
+            throws DbException {
+        if (!db.containsMessage(txn, m))
+            throw new NoSuchMessageException();
+        db.removeMessage(txn, m);
+    }
+
+    @Override
+    public Map<MessageId, Metadata> getMessageMetadata(Connection txn, GroupId g) throws DbException {
+        if (!db.containsGroup(txn, g))
+            throw new NoSuchGroupException();
+        return db.getMessageMetadata(txn, g);
+    }
+
+    @Override
+    public Metadata getMessageMetadata(Connection txn, MessageId m) throws DbException {
+        if (!db.containsMessage(txn, m))
+            throw new NoSuchMessageException();
+        return db.getMessageMetadata(txn, m);
+    }
+
+    @Override
+    public Metadata getGroupMetadata(Connection txn, GroupId g) throws DbException {
+        if (!db.containsGroup(txn, g))
+            throw new NoSuchGroupException();
+        return db.getGroupMetadata(txn, g);
+    }
+
+    @Override
+    public void addLocalMessage(Connection txn, Message m, Metadata meta, boolean shared,
+                                boolean temporary) throws DbException {
+        if (!db.containsGroup(txn, m.getGroupId()))
+            throw new NoSuchGroupException();
+        if (!db.containsMessage(txn, m.getId())) {
+            db.addMessage(txn, m, DELIVERED, shared, temporary, null);
+
+            // fixme: removed events
+//            transaction.attach(new MessageAddedEvent(m, null));
+//            transaction.attach(new MessageStateChangedEvent(m.getId(), true,
+//                    DELIVERED));
+//            if (shared) transaction.attach(new MessageSharedEvent(m.getId()));
+        }
+        db.mergeMessageMetadata(txn, m.getId(), meta);
+    }
+
+    @Override
+    public void mergeGroupMetadata(Connection txn, GroupId g, Metadata meta) throws DbException {
+        if (!db.containsGroup(txn, g))
+            throw new NoSuchGroupException();
+        db.mergeGroupMetadata(txn, g, meta);
+    }
+
+    @Override
+    public void mergeMessageMetadata(Connection txn, MessageId m, Metadata meta) throws DbException {
+        if (!db.containsMessage(txn, m))
+            throw new NoSuchMessageException();
+        db.mergeMessageMetadata(txn, m, meta);
+    }
+
 
     @Override
     public <E extends Exception> void runInTransaction(boolean readOnly, DbRunnable<E> task)

@@ -11,7 +11,6 @@ import com.eugene.wc.protocol.api.db.DatabaseConfig;
 import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.util.StringUtils;
-import com.eugene.wc.protocol.identity.IdentityManagerImpl;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -19,7 +18,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
@@ -55,11 +53,7 @@ public class AccountManagerImpl implements AccountManager {
 
     @Override
     public void createAccount(String nickname, String password) throws CryptoException {
-        logger.info("Creating identity...");
-        KeyPair keyPair = cryptoComponent.generateSignatureKeyPair();
-        Identity identity = new Identity(keyPair.getPublicKey(), keyPair.getPrivateKey(), nickname);
-        logger.info("Storing identity...");
-        identityManager.storeIdentity(identity);
+        identityManager.createIdentity(nickname);
 
         SecretKey secretKey = cryptoComponent.generateSecretKey();
         encryptAndStoreDatabaseKey(secretKey, password);

@@ -3,7 +3,11 @@ package com.eugene.wc.protocol.api.crypto;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.DecryptionException;
 
+import java.security.SecureRandom;
+
 public interface CryptoComponent {
+
+    SecureRandom getSecureRandom();
 
     SecretKey generateSecretKey();
 
@@ -18,6 +22,8 @@ public interface CryptoComponent {
     KeyPair generateSignatureKeyPair();
 
     byte[] mac(SecretKey secretKey, String namespace, byte[]... inputs);
+
+    byte[] hash(String label, byte[]... inputs);
 
     SecretKey deriveKey(SecretKey secretKey, String namespace, byte[]... inputs);
 

@@ -4,8 +4,8 @@ import com.eugene.wc.protocol.api.db.exception.DbException;
 
 public interface IdentityManager {
 
-    void storeIdentity(Identity identity);
+    void createIdentity(String name);
 
     // there supposed to be only one identity associated with device
-    Identity getIdentity() throws DbException;
+    LocalIdentity getIdentity() throws DbException;
 }

@@ -12,6 +12,10 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
 
+import com.eugene.wc.protocol.api.connection.ConnectionManager;
+import com.eugene.wc.protocol.api.connection.ConnectionRegistry;
+import com.eugene.wc.protocol.api.contact.ContactId;
+import com.eugene.wc.protocol.api.data.WdfReader;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.io.IoExecutor;
@@ -32,10 +36,14 @@ import com.eugene.wc.protocol.api.plugin.event.TransportActiveEvent;
 import com.eugene.wc.protocol.api.plugin.event.TransportInactiveEvent;
 import com.eugene.wc.protocol.api.plugin.event.TransportStateEvent;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
+import com.eugene.wc.protocol.api.properties.TransportPropertyManager;
 import com.eugene.wc.protocol.api.settings.Settings;
 import com.eugene.wc.protocol.api.settings.SettingsManager;
 import com.eugene.wc.protocol.api.system.WakefulIoExecutor;
+import com.eugene.wc.protocol.data.WdfReaderImpl;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -52,7 +60,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 
 @ThreadSafe
-class PluginManagerImpl implements PluginManager, Service {
+public class PluginManagerImpl implements PluginManager, Service {
 
 	private static final Logger logger = getLogger(PluginManagerImpl.class.getName());
 
@@ -60,24 +68,30 @@ class PluginManagerImpl implements PluginManager, Service {
 	private final EventBus eventBus;
 	private final PluginConfig pluginConfig;
 	private final SettingsManager settingsManager;
-//	private final TransportPropertyManager transportPropertyManager;
+	private final TransportPropertyManager tpm;
 	private final Map<TransportId, Plugin> plugins;
 	private final List<DuplexPlugin> duplexPlugins;
 	private final Map<TransportId, CountDownLatch> startLatches;
 	private final AtomicBoolean used = new AtomicBoolean(false);
 
+	private final ConnectionManager connectionManager;
+
 	@Inject
-	PluginManagerImpl(@IoExecutor Executor ioExecutor,
-			@WakefulIoExecutor Executor wakefulIoExecutor,
-			EventBus eventBus,
-			PluginConfig pluginConfig,
-			SettingsManager settingsManager) {
+	public PluginManagerImpl(@IoExecutor Executor ioExecutor,
+							 @WakefulIoExecutor Executor wakefulIoExecutor,
+							 EventBus eventBus,
+							 PluginConfig pluginConfig,
+							 SettingsManager settingsManager,
+							 TransportPropertyManager tpm,
+							 ConnectionManager connectionManager) {
 		this.ioExecutor = ioExecutor;
 		this.wakefulIoExecutor = wakefulIoExecutor;
 		this.eventBus = eventBus;
 		this.pluginConfig = pluginConfig;
 		this.settingsManager = settingsManager;
-//		this.transportPropertyManager = transportPropertyManager;
+		this.tpm = tpm;
+		this.connectionManager = connectionManager;
+
 		plugins = new ConcurrentHashMap<>();
 		duplexPlugins = new CopyOnWriteArrayList<>();
 		startLatches = new ConcurrentHashMap<>();
@@ -146,14 +160,6 @@ class PluginManagerImpl implements PluginManager, Service {
 		return supported;
 	}
 
-//	@Override
-//	public Collection<DuplexPlugin> getRendezvousPlugins() {
-//		List<DuplexPlugin> supported = new ArrayList<>();
-//		for (DuplexPlugin d : duplexPlugins)
-//			if (d.supportsRendezvous()) supported.add(d);
-//		return supported;
-//	}
-
 	@Override
 	public void setPluginEnabled(TransportId t, boolean enabled) {
 		Plugin plugin = plugins.get(t);
@@ -189,9 +195,7 @@ class PluginManagerImpl implements PluginManager, Service {
 		public void run() {
 			try {
 				long start = now();
-				logger.info("BEFORE plugin.start()");
 				plugin.start();
-				logger.info("AFTER plugin.start()");
 				logDuration(logger, "Starting plugin " + plugin.getId(),
 						start);
 
@@ -268,26 +272,23 @@ class PluginManagerImpl implements PluginManager, Service {
 
 		@Override
 		public TransportProperties getLocalProperties() {
-//			try {
-//				return transportPropertyManager.getLocalProperties(id);
-//			} catch (DbException e) {
-//				logException(LOG, WARNING, e);
-//				return new TransportProperties();
-//			}
+			try {
+				return tpm.getLocalProperties(id);
+			} catch (DbException e) {
+				logger.warning("Unable to get local properties\n" + e);
+			}
 			return new TransportProperties();
 		}
 
 		@Override
 		public Collection<TransportProperties> getRemoteProperties() {
-//			try {
-//				Map<ContactId, TransportProperties> remote =
-//						transportPropertyManager.getRemoteProperties(id);
-//				return remote.values();
-//			} catch (DbException e) {
-//				logException(LOG, WARNING, e);
-//				return emptyList();
-//			}
-			return emptyList();
+			try {
+				Map<ContactId, TransportProperties> remote = tpm.getRemoteProperties(id);
+				return remote.values();
+			} catch (DbException e) {
+				logger.warning("Unable to get remote properties\n" + e);
+				return emptyList();
+			}
 		}
 
 		@Override
@@ -297,11 +298,11 @@ class PluginManagerImpl implements PluginManager, Service {
 
 		@Override
 		public void mergeLocalProperties(TransportProperties p) {
-//			try {
-//				transportPropertyManager.mergeLocalProperties(id, p);
-//			} catch (DbException e) {
-//				logException(LOG, WARNING, e);
-//			}
+			try {
+				tpm.mergeLocalProperties(id, p);
+			} catch (DbException e) {
+				logger.warning("Unable to merge local properties\n" + e);
+			}
 		}
 
 		@Override
@@ -327,18 +328,7 @@ class PluginManagerImpl implements PluginManager, Service {
 
 		@Override
 		public void handleConnection(DuplexTransportConnection d) {
-//			connectionManager.manageIncomingConnection(id, d);
-		}
-
-		@Override
-		public void handleReader(TransportConnectionReader r) {
-//			connectionManager.manageIncomingConnection(id, r);
-		}
-
-		@Override
-		public void handleWriter(TransportConnectionWriter w) {
-			// TODO: Support simplex plugins that write to incoming connections
-			throw new UnsupportedOperationException();
+			connectionManager.manageIncomingConnection(d, this.id);
 		}
 	}
 }

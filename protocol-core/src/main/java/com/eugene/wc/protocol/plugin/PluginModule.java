@@ -1,7 +1,9 @@
 package com.eugene.wc.protocol.plugin;
 
+import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
 import com.eugene.wc.protocol.api.plugin.BackoffFactory;
+import com.eugene.wc.protocol.api.plugin.PluginConfig;
 import com.eugene.wc.protocol.api.plugin.PluginManager;
 
 import javax.inject.Inject;
@@ -13,12 +15,12 @@ import dagger.Provides;
 @Module
 public class PluginModule {
 
-//	public static class EagerSingletons {
-//		@Inject
-//		PluginManager pluginManager;
-//		@Inject
-//		Poller poller;
-//	}
+	public static class EagerSingletons {
+		@Inject
+		PluginManager pluginManager;
+		@Inject
+		Poller poller;
+	}
 
 	@Provides
 	BackoffFactory provideBackoffFactory() {
@@ -33,11 +35,11 @@ public class PluginModule {
 		return pluginManager;
 	}
 
-//	@Provides
-//	@Singleton
-//	Poller providePoller(PluginConfig config, EventBus eventBus,
-//						 PollerImpl poller) {
-//		if (config.shouldPoll()) eventBus.addListener(poller);
-//		return poller;
-//	}
+	@Provides
+	@Singleton
+	Poller providePoller(PluginConfig config, EventBus eventBus,
+						 PollerImpl poller) {
+		if (config.shouldPoll()) eventBus.addListener(poller);
+		return poller;
+	}
 }

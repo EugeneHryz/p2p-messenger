@@ -1,26 +1,33 @@
 package com.eugene.wc.protocol.contact.exchange;
 
 import com.eugene.wc.protocol.api.Pair;
+import com.eugene.wc.protocol.api.client.ClientHelper;
 import com.eugene.wc.protocol.api.contact.Contact;
+import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.ContactManager;
 import com.eugene.wc.protocol.api.contact.event.ContactExchangeFailedEvent;
 import com.eugene.wc.protocol.api.contact.event.ContactExchangeFinishedEvent;
 import com.eugene.wc.protocol.api.contact.exception.ContactAlreadyExistsException;
+import com.eugene.wc.protocol.api.contact.exception.ContactExchangeException;
 import com.eugene.wc.protocol.api.contact.exchange.ContactExchangeKeyManager;
 import com.eugene.wc.protocol.api.contact.exchange.ContactExchangeManager;
-import com.eugene.wc.protocol.api.contact.exchange.IdentityDecoder;
-import com.eugene.wc.protocol.api.contact.exchange.IdentityEncoder;
+import com.eugene.wc.protocol.api.contact.exchange.ContactInfo;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.DecryptionException;
+import com.eugene.wc.protocol.api.data.WdfDictionary2;
+import com.eugene.wc.protocol.api.data.WdfList2;
 import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.identity.Identity;
+import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeResult;
-import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeFinishedEvent;
+import com.eugene.wc.protocol.api.plugin.TransportId;
+import com.eugene.wc.protocol.api.properties.TransportProperties;
+import com.eugene.wc.protocol.api.properties.TransportPropertyManager;
 import com.eugene.wc.protocol.api.transport.EncryptedPacket;
 import com.eugene.wc.protocol.api.transport.Tag;
 import com.eugene.wc.protocol.api.transport.TransportReader;
@@ -31,9 +38,11 @@ import com.eugene.wc.protocol.transport.TransportWriterImpl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.sql.Connection;
+import java.util.Map;
 import java.util.logging.Logger;
 
-public class ContactExchangeManagerImpl extends Thread implements ContactExchangeManager {
+public class ContactExchangeManagerImpl implements ContactExchangeManager {
 
     private static final Logger logger = Logger.getLogger(ContactExchangeManagerImpl.class.getName());
 
@@ -42,29 +51,31 @@ public class ContactExchangeManagerImpl extends Thread implements ContactExchang
     private final CryptoComponent crypto;
     private final EventBus eventBus;
     private final ContactManager contactManager;
+    private final ClientHelper clientHelper;
+    private final TransportPropertyManager tpm;
+    private final DatabaseComponent db;
 
     private final SecretKey masterKey;
     private final boolean isAlice;
-
-    private final IdentityEncoder identityEncoder;
-    private final IdentityDecoder identityDecoder;
 
     private TransportReader transportReader;
     private TransportWriter transportWriter;
 
     public ContactExchangeManagerImpl(KeyExchangeResult result, IdentityManager identityManager,
                                       CryptoComponent crypto, EventBus eventBus,
-                                      ContactManager contactManager) {
+                                      ContactManager contactManager, ClientHelper clientHelper,
+                                      TransportPropertyManager tpm, DatabaseComponent db) {
         this.identityManager = identityManager;
         this.crypto = crypto;
         this.eventBus = eventBus;
         this.contactManager = contactManager;
+        this.clientHelper = clientHelper;
+        this.tpm = tpm;
+        this.db = db;
         masterKey = result.getMasterKey();
         isAlice = result.isAlice();
-        identityEncoder = new IdentityEncoderImpl();
-        identityDecoder = new IdentityDecoderImpl();
 
-        keyManager = new ContactExchangeKeyManagerImpl(result.isAlice(), crypto);
+        keyManager = new ContactExchangeKeyManagerImpl(isAlice, crypto);
         keyManager.generateInitialKeys(masterKey);
 
         try {
@@ -81,65 +92,81 @@ public class ContactExchangeManagerImpl extends Thread implements ContactExchang
     }
 
     @Override
-    public void startContactExchange() {
-        start();
+    public ContactId startContactExchange() throws ContactExchangeException {
+        return performExchange();
     }
 
-    @Override
-    public void run() {
+    private ContactId performExchange() throws ContactExchangeException {
         Identity localIdentity;
         try {
             localIdentity = identityManager.getIdentity();
         } catch (DbException e) {
             logger.warning("Unable to load local identity " + e);
-            return;
+            throw new ContactExchangeException("Unable to load local identity", e);
         }
         if (localIdentity == null) {
             logger.warning("Identity is null");
-            return;
+            throw new ContactExchangeException("Identity is null");
+        }
+        Map<TransportId, TransportProperties> localProps;
+        try {
+            localProps = tpm.getLocalProperties();
+        } catch (DbException e) {
+            logger.warning("Unable to get local properties\n" + e);
+            throw new ContactExchangeException("Unable to get local transport properties", e);
         }
 
         try {
-            Identity remoteIdentity;
+            ContactInfo remoteContactInfo;
             if (isAlice) {
-                encryptAndSendIdentity(localIdentity);
-                logger.info("Alice sent her identity and about to receive Bob's");
-                remoteIdentity = receiveAndDecryptIdentity();
+                encryptAndSendContactInfo(localIdentity, localProps);
+                remoteContactInfo = receiveAndDecryptContactInfo();
             } else {
-
-                remoteIdentity = receiveAndDecryptIdentity();
-                logger.info("Bob received Alice's identity and about to send his own");
-                encryptAndSendIdentity(localIdentity);
+                remoteContactInfo = receiveAndDecryptContactInfo();
+                encryptAndSendContactInfo(localIdentity, localProps);
             }
-            logger.info("Received remote identity!!! Name: " + remoteIdentity.getName());
-            if (storeContact(remoteIdentity)) {
-                logger.info("Contact created in the db");
-                eventBus.broadcast(new ContactExchangeFinishedEvent());
-            } else {
-                logger.info("Failed to create a contact");
-                eventBus.broadcast(new ContactExchangeFailedEvent());
+
+            try {
+                ContactId contactId = addContact(remoteContactInfo, localIdentity.getId());
+                return contactId;
+
+            } catch (ContactAlreadyExistsException | DbException e) {
+                throw new ContactExchangeException("Unable to add contact", e);
             }
 
         } catch (IOException | CryptoException e) {
             logger.warning("Unable to perform contact exchange " + e);
-            eventBus.broadcast(new ContactExchangeFailedEvent());
+            throw new ContactExchangeException("Unable to perform contact exchange", e);
         }
     }
 
-    private boolean storeContact(Identity identity) {
-        Contact contact = new Contact(identity.getName(), identity.getPublicKey());
-
-        boolean contactStored = false;
+    private ContactId addContact(ContactInfo contactInfo, IdentityId localId)
+            throws ContactAlreadyExistsException, DbException {
+        Connection txn = null;
+        ContactId contactId;
         try {
-            contactStored = contactManager.createContact(contact);
-        } catch (ContactAlreadyExistsException e) {
-            logger.info("Contact already exists");
+            txn = db.startTransaction(false);
+
+            contactId = contactManager.createContact(txn, contactInfo.getIdentity(), localId);
+            logger.info("Adding remote properties of a contact " + contactInfo.getIdentity().getName());
+            tpm.addRemoteProperties(txn, contactId, contactInfo.getProperties());
+
+            db.commitTransaction(txn);
+        } catch (DbException | ContactAlreadyExistsException e) {
+            logger.info("Unable to add contact\n" + e);
+            db.abortTransaction(txn);
+            throw e;
         }
-        return contactStored;
+        return contactId;
     }
 
-    private void encryptAndSendIdentity(Identity identity) throws IOException, CryptoException {
-        byte[] encoded = identityEncoder.encode(identity);
+    private void encryptAndSendContactInfo(Identity identity, Map<TransportId, TransportProperties>
+            propertiesMap) throws IOException, CryptoException {
+
+        WdfList2 identityList = clientHelper.toList(identity);
+        WdfDictionary2 properties = clientHelper.toDictionary(propertiesMap);
+        byte[] encoded = clientHelper.toByteArray(WdfList2.of(identityList, properties));
+
         Pair<SecretKey, Tag> keyAndTag = keyManager.retrieveNextOutgoingKeyAndTag();
 
         SecretKey key = keyAndTag.getFirst();
@@ -149,13 +176,23 @@ public class ContactExchangeManagerImpl extends Thread implements ContactExchang
         transportWriter.writePacket(packet);
     }
 
-    private Identity receiveAndDecryptIdentity() throws IOException, DecryptionException {
+    private ContactInfo receiveAndDecryptContactInfo() throws IOException, DecryptionException {
         EncryptedPacket packet = transportReader.readNextPacket();
 
         SecretKey key = keyManager.retrieveIncomingKey(packet.getTag());
         byte[] decrypted = crypto.decryptWithKey(key, packet.getContent());
 
-        Identity identity = identityDecoder.decode(decrypted);
-        return identity;
+        WdfList2 payload = clientHelper.toList(decrypted);
+        if (payload.size() != 2) {
+            throw new AssertionError("Expected list with size 2");
+        }
+        WdfList2 identityAsList = payload.getList(0);
+        WdfDictionary2 propertiesAsDictionary = payload.getDictionary(1);
+
+        Identity identity = clientHelper.parseIdentity(identityAsList);
+        Map<TransportId, TransportProperties> propsMap = clientHelper
+                .parseTransportPropertiesMap(propertiesAsDictionary);
+
+        return new ContactInfo(identity, propsMap);
     }
 }

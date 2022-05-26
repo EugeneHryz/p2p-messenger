@@ -1,10 +1,12 @@
 package com.eugene.wc.protocol.plugin.bluetooth;
 
+import static com.eugene.wc.protocol.api.plugin.BluetoothConstants.ID;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Logger.getLogger;
 
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
+import com.eugene.wc.protocol.api.sync.event.CloseSyncConnectionsEvent;
 
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -40,7 +42,7 @@ public class BluetoothConnectionLimiterImpl implements BluetoothConnectionLimite
 			limitingInProgress++;
 		}
 		LOG.info("Limiting started");
-//		eventBus.broadcast(new CloseSyncConnectionsEvent(ID));
+		eventBus.broadcast(new CloseSyncConnectionsEvent(ID));
 	}
 
 	@Override

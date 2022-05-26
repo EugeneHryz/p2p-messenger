@@ -6,14 +6,17 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.eugene.wc.protocol.api.client.ClientHelper;
+import com.eugene.wc.protocol.api.connection.ConnectionManager;
+import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.ContactManager;
-import com.eugene.wc.protocol.api.contact.event.ContactExchangeFailedEvent;
-import com.eugene.wc.protocol.api.contact.event.ContactExchangeFinishedEvent;
+import com.eugene.wc.protocol.api.contact.exception.ContactExchangeException;
 import com.eugene.wc.protocol.api.contact.exchange.ContactExchangeManager;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.data.StreamDataReader;
 import com.eugene.wc.protocol.api.data.StreamDataWriter;
+import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.event.Event;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.event.EventListener;
@@ -31,6 +34,9 @@ import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeStartedEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeWaitingEvent;
 import com.eugene.wc.protocol.api.keyexchange.exception.DecodeException;
 import com.eugene.wc.protocol.api.keyexchange.exception.EncodeException;
+import com.eugene.wc.protocol.api.plugin.TransportId;
+import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
+import com.eugene.wc.protocol.api.properties.TransportPropertyManager;
 import com.eugene.wc.protocol.contact.exchange.ContactExchangeManagerImpl;
 import com.eugene.wc.protocol.data.StreamDataReaderImpl;
 import com.eugene.wc.protocol.data.StreamDataWriterImpl;
@@ -41,6 +47,7 @@ import com.eugene.wc.qrcode.QrCodeDecoder;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executor;
@@ -68,6 +75,10 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
     private final EventBus eventBus;
     private final Executor ioExecutor;
     private final ContactManager contactManager;
+    private final ConnectionManager connectionManager;
+    private final ClientHelper clientHelper;
+    private final TransportPropertyManager tpm;
+    private final DatabaseComponent db;
 
     private final KeyExchangeTask ket;
 
@@ -75,14 +86,21 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
     private Payload localPayload;
 
     private final AtomicBoolean payloadReceived = new AtomicBoolean();
+    private boolean startedListening;
 
     @Inject
     public AddContactViewModel(CryptoComponent crypto, EventBus eventBus,
                                @IoExecutor Executor ioExecutor, KeyExchangeTask ket,
-                               IdentityManager identityManager, ContactManager contactManager) {
+                               IdentityManager identityManager, ContactManager contactManager,
+                               ClientHelper clientHelper, TransportPropertyManager tpm,
+                               DatabaseComponent db, ConnectionManager connectionManager) {
         this.identityManager = identityManager;
         this.crypto = crypto;
         this.contactManager = contactManager;
+        this.clientHelper = clientHelper;
+        this.connectionManager = connectionManager;
+        this.tpm = tpm;
+        this.db = db;
         this.eventBus = eventBus;
         this.ioExecutor = ioExecutor;
         this.ket = ket;
@@ -93,12 +111,21 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
 
     @Override
     protected void onCleared() {
+        Log.d(TAG, "Destroying this viewModel");
         eventBus.removeListener(this);
+
+        if (startedListening) {
+            ioExecutor.execute(() -> {
+                ket.stopListening();
+                Log.d(TAG, "Stopped listening");
+            });
+        }
     }
 
     @Override
     public void onEventOccurred(Event e) {
         if (e instanceof KeyExchangeListeningEvent) {
+            startedListening = true;
             KeyExchangeListeningEvent event = (KeyExchangeListeningEvent) e;
             localPayload = event.getPayload();
 
@@ -121,12 +148,7 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
 
             Log.d(TAG, "Starting contact exchange...");
             startContactExchange(event.getResult());
-        } else if (e instanceof ContactExchangeFinishedEvent) {
-            state.postValue(State.FINISHED);
-
         } else if (e instanceof KeyExchangeAbortedEvent) {
-            state.postValue(State.FAILED);
-        } else if (e instanceof ContactExchangeFailedEvent) {
             state.postValue(State.FAILED);
         }
     }
@@ -170,8 +192,25 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
 
     private void startContactExchange(KeyExchangeResult result) {
         ContactExchangeManager cem = new ContactExchangeManagerImpl(result, identityManager,
-                crypto, eventBus, contactManager);
-        cem.startContactExchange();
+                crypto, eventBus, contactManager, clientHelper, tpm, db);
+
+        DuplexTransportConnection conn = result.getTransport().getConnection();
+        TransportId transportId = result.getTransport().getTransportId();
+
+        ioExecutor.execute(() -> {
+            try {
+                ContactId addedContactId = cem.startContactExchange();
+
+                if (result.isAlice()) {
+                    connectionManager.manageOutgoingConnection(conn, transportId, addedContactId);
+                } else {
+                    connectionManager.manageIncomingConnection(conn, transportId);
+                }
+                state.postValue(State.FINISHED);
+            } catch (ContactExchangeException e) {
+                Log.w(TAG, "Contact exchange failed", e);
+            }
+        });
     }
 
     private String encodePayload(Payload payload) throws EncodeException,

@@ -36,6 +36,8 @@ public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
 
     private static final String TAG = CameraView.class.getName();
 
+    private static final long MIN_OUTPUT_SIZE_AREA = 200000;
+
     private String cameraId;
     private CameraDevice cameraDevice;
 
@@ -184,7 +186,15 @@ public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
 //        Collections.sort(suitableSizes, new CompareSizesByArea());
 
         int listSize = suitableSizes.size();
-        return listSize > 0 ? suitableSizes.get(listSize / 2) : null;
+        Size chosenSize = listSize != 0 ? suitableSizes.get(0) : null;
+        for (Size size : suitableSizes) {
+            long area = CompareSizesByArea.calculateArea(size);
+
+            if (area >= MIN_OUTPUT_SIZE_AREA) {
+                chosenSize = size;
+            }
+        }
+        return chosenSize;
     }
 
     private void setUpCameraOutputs() {
@@ -249,8 +259,11 @@ public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
 
         @Override
         public int compare(Size lhs, Size rhs) {
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
+            return Long.signum(calculateArea(lhs) - calculateArea(rhs));
+        }
+
+        public static long calculateArea(Size s) {
+            return (long) s.getHeight() * s.getWidth();
         }
     }
 

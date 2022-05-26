@@ -11,6 +11,7 @@ import com.eugene.wc.protocol.api.crypto.PasswordBasedKdf;
 import com.eugene.wc.protocol.api.crypto.Signature;
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
 
+import java.security.SecureRandom;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
@@ -45,6 +46,11 @@ public class CryptoModule {
     public Executor provideCryptoExecutor(LifecycleManager lifecycleManager) {
         lifecycleManager.registerForShutdown(cryptoExecutor);
         return cryptoExecutor;
+    }
+
+    @Provides
+    public SecureRandom provideSecureRandom(CryptoComponent crypto) {
+        return crypto.getSecureRandom();
     }
 
     @Provides

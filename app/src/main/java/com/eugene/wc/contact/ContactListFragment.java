@@ -3,13 +3,13 @@ package com.eugene.wc.contact;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -18,10 +18,10 @@ import com.eugene.wc.activity.ActivityComponent;
 import com.eugene.wc.activity.RequestCode;
 import com.eugene.wc.contact.add.AddContactActivity;
 import com.eugene.wc.fragment.BaseFragment;
+import com.eugene.wc.protocol.api.Predicate;
 import com.eugene.wc.view.MessengerRecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -60,6 +60,8 @@ public class ContactListFragment extends BaseFragment {
         viewModel.getContacts().observe(getViewLifecycleOwner(), contactItems ->
                 adapter.setItems(contactItems));
 
+        viewModel.getShouldUpdate().observe(getViewLifecycleOwner(), this::updateContactItems);
+
         return view;
     }
 
@@ -87,6 +89,18 @@ public class ContactListFragment extends BaseFragment {
         adapter = new ContactListAdapter();
 
         contactList.setAdapter(adapter);
+    }
+
+    private void updateContactItems(Predicate<ContactItem> shouldUpdate) {
+        Log.d(TAG, "About to update contact status...");
+        List<ContactItem> allItems = viewModel.getContacts().getValue();
+        if (allItems != null) {
+            for (ContactItem c : allItems) {
+                if (shouldUpdate.test(c)) {
+                    adapter.updateItem(c);
+                }
+            }
+        }
     }
 
     private void startAddContactActivityForResult() {

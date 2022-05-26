@@ -2,6 +2,8 @@ package com.eugene.wc;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
+import static java.util.Collections.singletonMap;
 
 import android.app.Application;
 import android.content.Context;
@@ -10,6 +12,8 @@ import android.os.StrictMode;
 import com.eugene.wc.plugin.bluetooth.AndroidBluetoothPluginFactory;
 import com.eugene.wc.plugin.tcp.AndroidLanTcpPluginFactory;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
+import com.eugene.wc.protocol.api.plugin.BluetoothConstants;
+import com.eugene.wc.protocol.api.plugin.LanTcpConstants;
 import com.eugene.wc.protocol.api.plugin.PluginConfig;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPluginFactory;
@@ -75,7 +79,8 @@ public class AppModule {
             @Override
             public Map<TransportId, List<TransportId>> getTransportPreferences() {
                 // Prefer LAN to Bluetooth
-                return null;
+                return singletonMap(BluetoothConstants.ID,
+                        singletonList(LanTcpConstants.ID));
             }
         };
         return pluginConfig;

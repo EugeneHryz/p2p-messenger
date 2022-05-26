@@ -4,7 +4,9 @@ import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.DatabaseOpenListener;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.identity.Identity;
+import com.eugene.wc.protocol.api.identity.IdentityFactory;
 import com.eugene.wc.protocol.api.identity.IdentityManager;
+import com.eugene.wc.protocol.api.identity.LocalIdentity;
 
 import java.sql.Connection;
 import java.util.logging.Logger;
@@ -16,18 +18,20 @@ public class IdentityManagerImpl implements IdentityManager, DatabaseOpenListene
     private static final Logger logger = Logger.getLogger(IdentityManagerImpl.class.getName());
 
     private final DatabaseComponent dbComponent;
+    private final IdentityFactory identityFactory;
 
     private volatile boolean shouldStoreIdentity;
-    private Identity cachedIdentity;
+    private LocalIdentity cachedIdentity;
 
     @Inject
-    public IdentityManagerImpl(DatabaseComponent dbComponent) {
+    public IdentityManagerImpl(DatabaseComponent dbComponent, IdentityFactory identityFactory) {
         this.dbComponent = dbComponent;
+        this.identityFactory = identityFactory;
     }
 
     @Override
-    public void storeIdentity(Identity identity) {
-        cachedIdentity = identity;
+    public void createIdentity(String name) {
+        cachedIdentity = identityFactory.createLocalIdentity(name);
         shouldStoreIdentity = true;
     }
 
@@ -35,29 +39,29 @@ public class IdentityManagerImpl implements IdentityManager, DatabaseOpenListene
     public void onDatabaseOpened(Connection txn) {
         if (shouldStoreIdentity) {
             try {
-                dbComponent.createIdentity(txn, cachedIdentity);
+                dbComponent.createLocalIdentity(txn, cachedIdentity);
             } catch (DbException e) {
-                logger.warning("Unable to create identity " + e);
+                logger.warning("Unable to create local identity " + e);
             }
         } else {
             try {
-                Identity identity = dbComponent.getIdentity(txn);
-                if (identity != null) {
-                    logger.info("Identity name: " + identity.getName());
+                LocalIdentity local = dbComponent.getLocalIdentity(txn);
+                if (local != null) {
+                    logger.info("Identity name: " + local.getName());
                 } else {
                     logger.info("Identity is null");
                 }
             } catch (DbException e) {
-                logger.warning("Unable to get identity " + e);
+                logger.warning("Unable to get local identity " + e);
             }
         }
     }
 
     @Override
-    public Identity getIdentity() throws DbException {
+    public LocalIdentity getIdentity() throws DbException {
         if (cachedIdentity != null) {
             return cachedIdentity;
         }
-        return dbComponent.runInTransactionWithResult(true, dbComponent::getIdentity);
+        return dbComponent.runInTransactionWithResult(true, dbComponent::getLocalIdentity);
     }
 }

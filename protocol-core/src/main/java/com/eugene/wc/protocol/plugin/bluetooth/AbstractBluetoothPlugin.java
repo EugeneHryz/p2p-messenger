@@ -24,6 +24,9 @@ import com.eugene.wc.protocol.api.event.Event;
 import com.eugene.wc.protocol.api.event.EventListener;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeConnection;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeListener;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeFinishedEvent;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeListeningEvent;
+import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeStoppedListeningEvent;
 import com.eugene.wc.protocol.api.plugin.Backoff;
 import com.eugene.wc.protocol.api.plugin.ConnectionHandler;
 import com.eugene.wc.protocol.api.plugin.PluginCallback;
@@ -31,6 +34,7 @@ import com.eugene.wc.protocol.api.plugin.PluginException;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
+import com.eugene.wc.protocol.api.properties.event.RemoteTransportPropertiesUpdatedEvent;
 import com.eugene.wc.protocol.api.settings.Settings;
 
 import java.io.IOException;
@@ -380,7 +384,18 @@ public abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 	}
 
 	@Override
-	public void onEventOccurred(Event event) {
+	public void onEventOccurred(Event e) {
+		if (e instanceof KeyExchangeListeningEvent) {
+			connectionLimiter.startLimiting();
+		} else if (e instanceof KeyExchangeStoppedListeningEvent) {
+			connectionLimiter.endLimiting();
+		} else if (e instanceof RemoteTransportPropertiesUpdatedEvent) {
+			RemoteTransportPropertiesUpdatedEvent r =
+					(RemoteTransportPropertiesUpdatedEvent) e;
+			if (r.getTransportId().equals(ID)) {
+				ioExecutor.execute(this::updateProperties);
+			}
+		}
 	}
 
 	@Override

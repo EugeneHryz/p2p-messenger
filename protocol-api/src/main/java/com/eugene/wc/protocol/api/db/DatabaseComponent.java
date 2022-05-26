@@ -1,13 +1,22 @@
 package com.eugene.wc.protocol.api.db;
 
 import com.eugene.wc.protocol.api.contact.Contact;
+import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.exception.ContactAlreadyExistsException;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.identity.Identity;
+import com.eugene.wc.protocol.api.identity.IdentityId;
+import com.eugene.wc.protocol.api.identity.LocalIdentity;
+import com.eugene.wc.protocol.api.sync.Group;
+import com.eugene.wc.protocol.api.sync.GroupId;
+import com.eugene.wc.protocol.api.sync.Message;
+import com.eugene.wc.protocol.api.sync.MessageId;
+import com.eugene.wc.protocol.api.sync.Metadata;
 
 import java.sql.Connection;
 import java.util.List;
+import java.util.Map;
 
 public interface DatabaseComponent {
     // high-level methods for data access
@@ -22,14 +31,41 @@ public interface DatabaseComponent {
 
     void abortTransaction(Connection txn);
 
-    void createIdentity(Connection txn, Identity identity) throws DbException;
+    void createLocalIdentity(Connection txn, LocalIdentity local) throws DbException;
 
-    Identity getIdentity(Connection txn) throws DbException;
+    LocalIdentity getLocalIdentity(Connection txn) throws DbException;
 
-    boolean createContact(Connection txn, Contact contact) throws DbException,
+    ContactId createContact(Connection txn, Identity remote, IdentityId localId) throws DbException,
             ContactAlreadyExistsException;
 
+    boolean containsGroup(Connection txn, GroupId g) throws DbException;
+
+    void addGroup(Connection txn, Group g) throws DbException;
+
+    void removeGroup(Connection txn, Group g) throws DbException;
+
+    Contact getContact(Connection txn, IdentityId id) throws DbException;
+
+    Contact getContactById(Connection txn, ContactId contactId) throws DbException;
+
     List<Contact> getAllContacts(Connection txn) throws DbException;
+
+    Message getMessage(Connection txn, MessageId m) throws DbException;
+
+    Map<MessageId, Metadata> getMessageMetadata(Connection txn, GroupId g) throws DbException;
+
+    Metadata getMessageMetadata(Connection txn, MessageId m) throws DbException;
+
+    Metadata getGroupMetadata(Connection txn, GroupId g) throws DbException;
+
+    void removeMessage(Connection txn, MessageId m) throws DbException;
+
+    void addLocalMessage(Connection transaction, Message m, Metadata meta, boolean shared, boolean temporary)
+            throws DbException;
+
+    void mergeMessageMetadata(Connection txn, MessageId m, Metadata meta) throws DbException;
+
+    void mergeGroupMetadata(Connection txn, GroupId g, Metadata meta) throws DbException;
 
 
     <E extends Exception> void runInTransaction(boolean readOnly,

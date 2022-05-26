@@ -3,6 +3,7 @@ package com.eugene.wc.protocol.db;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
 import com.eugene.wc.protocol.api.db.exception.DbException;
+import com.eugene.wc.protocol.api.sync.MessageFactory;
 import com.eugene.wc.protocol.api.util.IoUtils;
 import com.eugene.wc.protocol.api.util.StringUtils;
 
@@ -29,8 +30,8 @@ public class H2Database extends AbstractJdbcDatabase {
     private SecretKey secretKey;
 
     @Inject
-    public H2Database(DatabaseConfig dbConfig) {
-        super(dbTypes);
+    public H2Database(DatabaseConfig dbConfig, MessageFactory messageFactory) {
+        super(dbTypes, messageFactory);
 
         this.dbConfig = dbConfig;
         File dir = dbConfig.getDatabaseDirectory();

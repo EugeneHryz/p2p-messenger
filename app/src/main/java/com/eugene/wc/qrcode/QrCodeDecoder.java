@@ -71,7 +71,7 @@ public class QrCodeDecoder implements ImageConsumer {
             callback.onQrCodeDecoded(result.getText());
             logger.info("Decoded result: " + result.getText());
         } catch (ReaderException e) {
-            // unable to decode
+            logger.warning("Unable to decode: " + e);
         } finally {
             reader.reset();
         }
