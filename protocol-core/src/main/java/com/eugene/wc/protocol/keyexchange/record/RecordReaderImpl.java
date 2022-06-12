@@ -3,6 +3,7 @@ package com.eugene.wc.protocol.keyexchange.record;
 import com.eugene.wc.protocol.api.Predicate;
 import com.eugene.wc.protocol.api.keyexchange.record.Record;
 import com.eugene.wc.protocol.api.keyexchange.record.RecordReader;
+import com.eugene.wc.protocol.api.util.ByteUtils;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -24,7 +25,9 @@ public class RecordReaderImpl implements RecordReader {
         while (recordWeNeed == null && !isEof()) {
 
             byte nextType = (byte) input.read();
-            int length = readInteger32();
+            byte[] lengthBytes = new byte[ByteUtils.INT_32_BYTES];
+            input.readFully(lengthBytes);
+            int length = (int) ByteUtils.readUint32(lengthBytes, 0);
 
             byte[] content = new byte[length];
             input.readFully(content);
@@ -40,7 +43,11 @@ public class RecordReaderImpl implements RecordReader {
     @Override
     public Record readNextRecord() throws IOException {
         byte type = (byte) input.read();
-        int length = readInteger32();
+
+        byte[] lengthBytes = new byte[ByteUtils.INT_32_BYTES];
+        input.readFully(lengthBytes);
+        int length = (int) ByteUtils.readUint32(lengthBytes, 0);
+
         byte[] content = new byte[length];
         input.readFully(content);
 
@@ -50,15 +57,6 @@ public class RecordReaderImpl implements RecordReader {
     @Override
     public void close() throws IOException {
         input.close();
-    }
-
-    private int readInteger32() throws IOException {
-        int value = 0;
-        for (int i = 24; i >= 0; i -= 8) {
-            int nextByte = input.read();
-            value |= (nextByte << i);
-        }
-        return value;
     }
 
     private boolean isEof() throws IOException {

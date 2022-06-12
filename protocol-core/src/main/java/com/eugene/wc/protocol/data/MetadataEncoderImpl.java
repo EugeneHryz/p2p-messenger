@@ -1,14 +1,14 @@
 package com.eugene.wc.protocol.data;
 
 import static com.eugene.wc.protocol.api.data.WdfDictionary2.NULL_VALUE;
-import static com.eugene.wc.protocol.api.sync.Metadata.REMOVE;
+import static com.eugene.wc.protocol.api.session.Metadata.REMOVE;
 
 import com.eugene.wc.protocol.api.ByteArray;
 import com.eugene.wc.protocol.api.data.MetadataEncoder;
 import com.eugene.wc.protocol.api.data.WdfDictionary2;
 import com.eugene.wc.protocol.api.data.WdfWriter;
 import com.eugene.wc.protocol.api.data.exception.FormatException;
-import com.eugene.wc.protocol.api.sync.Metadata;
+import com.eugene.wc.protocol.api.session.Metadata;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

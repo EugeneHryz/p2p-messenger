@@ -1,33 +1,37 @@
 package com.eugene.wc.protocol.db;
 
-import static com.eugene.wc.protocol.api.sync.Metadata.REMOVE;
-import static com.eugene.wc.protocol.api.sync.SyncConstants.MESSAGE_HEADER_LENGTH;
-import static com.eugene.wc.protocol.api.sync.validation.MessageState.DELIVERED;
-import static java.util.logging.Level.WARNING;
+import static com.eugene.wc.protocol.api.session.Metadata.REMOVE;
+import static com.eugene.wc.protocol.api.session.SyncConstants.MESSAGE_HEADER_LENGTH;
+import static com.eugene.wc.protocol.api.session.validation.MessageState.DELIVERED;
 
 import com.eugene.wc.protocol.api.contact.Contact;
 import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.crypto.PrivateKey;
 import com.eugene.wc.protocol.api.crypto.PublicKey;
+import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.db.exception.MessageDeletedException;
 import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.identity.LocalIdentity;
 import com.eugene.wc.protocol.api.settings.Settings;
-import com.eugene.wc.protocol.api.sync.Group;
-import com.eugene.wc.protocol.api.sync.GroupId;
-import com.eugene.wc.protocol.api.sync.Message;
-import com.eugene.wc.protocol.api.sync.MessageFactory;
-import com.eugene.wc.protocol.api.sync.MessageId;
-import com.eugene.wc.protocol.api.sync.Metadata;
-import com.eugene.wc.protocol.api.sync.validation.MessageState;
+import com.eugene.wc.protocol.api.session.Group;
+import com.eugene.wc.protocol.api.session.GroupId;
+import com.eugene.wc.protocol.api.session.Message;
+import com.eugene.wc.protocol.api.session.MessageFactory;
+import com.eugene.wc.protocol.api.session.MessageId;
+import com.eugene.wc.protocol.api.session.Metadata;
+import com.eugene.wc.protocol.api.session.validation.MessageState;
+import com.eugene.wc.protocol.api.transport.TransportKeys;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -66,6 +70,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                     " local_identity_id _HASH NOT NULL," +
                     " name _STRING NOT NULL," +
                     " alias _STRING," +
+                    " added_date DATE NOT NULL," +
                     " public_key _BINARY NOT NULL," +
                     " PRIMARY KEY (id)," +
                     " FOREIGN KEY (local_identity_id)" +
@@ -75,7 +80,6 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             "CREATE TABLE groups"
                     + " (id _HASH NOT NULL,"
                     + " client_id _STRING NOT NULL,"
-                    + " major_version INT NOT NULL,"
                     + " descriptor _BINARY NOT NULL,"
                     + " PRIMARY KEY (id))";
 
@@ -112,8 +116,8 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
     private static final String CREATE_MESSAGE_METADATA_TABLE =
             "CREATE TABLE message_metadata"
                     + " (message_id _HASH NOT NULL,"
-                    + " group_id _HASH NOT NULL," // Denormalised
-                    + " state INT NOT NULL," // Denormalised
+                    + " group_id _HASH NOT NULL,"
+                    + " state INT NOT NULL,"
                     + " meta_key _STRING NOT NULL,"
                     + " value _BINARY NOT NULL,"
                     + " PRIMARY KEY (message_id, meta_key),"
@@ -123,6 +127,17 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                     + " FOREIGN KEY (group_id)"
                     + " REFERENCES groups (id)"
                     + " ON DELETE CASCADE)";
+
+    private static final String CREATE_KEYS_TABLE =
+            "CREATE TABLE keys" +
+                    " (key_set_id _COUNTER," +
+                    " contact_id INT NOT NULL," +
+                    " outgoing_key _SECRET NOT NULL," +
+                    " incoming_key _SECRET NOT NULL," +
+                    " PRIMARY KEY (key_set_id)," +
+                    " FOREIGN KEY (contact_id)" +
+                    " REFERENCES contacts (id)" +
+                    " ON DELETE CASCADE)";
 
     private final DatabaseTypes dbTypes;
     private final MessageFactory messageFactory;
@@ -177,6 +192,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             statement.executeUpdate(dbTypes.replaceTypes(CREATE_GROUP_METADATA_TABLE));
             statement.executeUpdate(dbTypes.replaceTypes(CREATE_MESSAGES_TABLE));
             statement.executeUpdate(dbTypes.replaceTypes(CREATE_MESSAGE_METADATA_TABLE));
+            statement.executeUpdate(dbTypes.replaceTypes(CREATE_KEYS_TABLE));
         } catch (SQLException e) {
             logger.warning("Unable to create database tables " + e);
         }
@@ -222,6 +238,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
         if (txn == null) {
             try {
                 txn = createConnection();
+                txn.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
                 txn.setAutoCommit(readOnly);
 
                 connectionsLock.lock();
@@ -312,7 +329,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
 
             return prStatement.executeUpdate() > 0;
         } catch (SQLException e) {
-            logger.warning("Unable to create local identity " + e);
+            logger.warning("Unable to create local identity\n" + e);
             throw new DbException("Unable to create local identity", e);
         }
     }
@@ -336,7 +353,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
 
             return localIdentities;
         } catch (SQLException e) {
-            logger.warning("Unable to get all local identities " + e);
+            logger.warning("Unable to get all local identities\n" + e);
             throw new DbException("Unable to get all local identities", e);
         }
     }
@@ -344,14 +361,17 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
     @Override
     public ContactId createContact(Connection txn, Identity remote, IdentityId localId) throws DbException {
         String sql = "INSERT INTO contacts" +
-                " (local_identity_id, identity_id, name, public_key)" +
-                " VALUES (?, ?, ?, ?)";
+                " (local_identity_id, identity_id, name, added_date, public_key)" +
+                " VALUES (?, ?, ?, ?, ?)";
 
         try (PreparedStatement prStatement = txn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             prStatement.setBytes(1, localId.getBytes());
             prStatement.setBytes(2, remote.getId().getBytes());
             prStatement.setString(3, remote.getName());
-            prStatement.setBytes(4, remote.getPublicKey().getBytes());
+
+            Date localDate = Date.valueOf(LocalDate.now().toString());
+            prStatement.setDate(4, localDate);
+            prStatement.setBytes(5, remote.getPublicKey().getBytes());
 
             int generatedId = -1;
             if (prStatement.executeUpdate() > 0) {
@@ -363,7 +383,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             return new ContactId(generatedId);
 
         } catch (SQLException e) {
-            logger.warning("Unable to create contact " + e);
+            logger.warning("Unable to create contact\n" + e);
             throw new DbException("Unable to create contact", e);
         }
     }
@@ -381,14 +401,15 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             return resultSet.next();
 
         } catch (SQLException e) {
-            logger.warning("Unable to check if contact exists " + e);
+            logger.warning("Unable to check if contact exists\n" + e);
             throw new DbException("Unable to check if contact exists", e);
         }
     }
 
     @Override
     public List<Contact> getAllContacts(Connection txn) throws DbException {
-        String sql = "SELECT id, local_identity_id, identity_id, name, public_key FROM contacts";
+        String sql = "SELECT id, local_identity_id, identity_id, name, added_date, public_key" +
+                " FROM contacts";
 
         try (Statement statement = txn.createStatement()) {
 
@@ -398,17 +419,17 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                 ContactId contactId = new ContactId(rs.getInt(1));
                 IdentityId localIdentityId = new IdentityId(rs.getBytes(2));
                 IdentityId identityId = new IdentityId(rs.getBytes(3));
-
                 String name = rs.getString(4);
-                PublicKey pubKey = new PublicKey(rs.getBytes(5));
+                LocalDate addedDate = LocalDate.parse(rs.getDate(5).toString());
+                PublicKey pubKey = new PublicKey(rs.getBytes(6));
 
                 Identity identity = new Identity(identityId, pubKey, name);
-                contacts.add(new Contact(contactId, localIdentityId, identity));
+                contacts.add(new Contact(contactId, localIdentityId, identity, addedDate));
             }
             return contacts;
 
         } catch (SQLException e) {
-            logger.warning("Unable to get all contacts " + e);
+            logger.warning("Unable to get all contacts\n" + e);
             throw new DbException("Unable to get all contacts", e);
         }
     }
@@ -423,7 +444,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             ResultSet rs = prStatement.executeQuery();
             return rs.next();
         } catch (SQLException e) {
-            logger.warning("Unable to check if message exists " + e);
+            logger.warning("Unable to check if message exists\n" + e);
             throw new DbException("Unable to check if message exists", e);
         }
     }
@@ -451,7 +472,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                 return new Message(m, groupId, timestamp, body);
             }
         } catch (SQLException e) {
-            logger.warning("Unable to get message " + e);
+            logger.warning("Unable to get message\n" + e);
             throw new DbException("Unable to get message", e);
         }
         return null;
@@ -478,29 +499,8 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             prStatement.setBytes(8, raw);
             int affected = prStatement.executeUpdate();
 
-            // Create a status row for each contact that can see the group
-//            Map<ContactId, Boolean> visibility =
-//                    getGroupVisibility(txn, m.getGroupId());
-//            for (Map.Entry<ContactId, Boolean> e : visibility.entrySet()) {
-//                ContactId c = e.getKey();
-//                boolean offered = removeOfferedMessage(txn, c, m.getId());
-//                boolean seen = offered || c.equals(sender);
-//                addStatus(txn, m.getId(), c, m.getGroupId(), m.getTimestamp(),
-//                        raw.length, state, e.getValue(), shared, false, seen);
-//            }
-            // Update denormalised column in messageDependencies if dependency
-            // is in same group as dependent
-//            sql = "UPDATE messageDependencies SET dependencyState = ?"
-//                    + " WHERE groupId = ? AND dependencyId = ?";
-//            ps = txn.prepareStatement(sql);
-//            ps.setInt(1, state.getValue());
-//            ps.setBytes(2, m.getGroupId().getBytes());
-//            ps.setBytes(3, m.getId().getBytes());
-//            affected = ps.executeUpdate();
-//            if (affected < 0) throw new DbStateException();
-//            ps.close();
         } catch (SQLException e) {
-            logger.warning("Unable to create a message " + e);
+            logger.warning("Unable to create a message\n" + e);
             throw new DbException("Unable to create a message", e);
         }
     }
@@ -508,13 +508,13 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
     @Override
     public void mergeMessageMetadata(Connection txn, MessageId m,
                                      Metadata meta) throws DbException {
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+        PreparedStatement ps;
+        ResultSet rs;
         try {
             Map<String, byte[]> added = removeOrUpdateMetadata(txn,
                     m.getBytes(), meta, "message_metadata", "message_id");
             if (added.isEmpty()) return;
-            // Get the group ID and message state for the denormalised columns
+
             String sql = "SELECT group_id, state FROM messages"
                     + " WHERE id = ?";
             ps = txn.prepareStatement(sql);
@@ -525,7 +525,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             MessageState state = MessageState.fromValue(rs.getInt(2));
             rs.close();
             ps.close();
-            // Insert any keys that don't already exist
+
             sql = "INSERT INTO message_metadata"
                     + " (message_id, group_id, state, meta_key, value)"
                     + " VALUES (?, ?, ?, ?, ?)";
@@ -545,7 +545,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                 if (rows != 1) throw new DbException();
             ps.close();
         } catch (SQLException e) {
-            logger.warning("Unable to merge message metadata " + e);
+            logger.warning("Unable to merge message metadata\n" + e);
             throw new DbException("Unable to merge message metadata", e);
         }
     }
@@ -568,12 +568,9 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                 prStatement.addBatch();
             }
             int[] batchAffected = prStatement.executeBatch();
-//            if (batchAffected.length != added.size())
-//                throw new DbStateException();
-//            for (int rows : batchAffected)
-//                if (rows != 1) throw new DbStateException();
+
         } catch (SQLException e) {
-            logger.warning("Unable to merge group metadata " + e);
+            logger.warning("Unable to merge group metadata\n" + e);
             throw new DbException(e);
         }
     }
@@ -589,7 +586,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             return rs.next();
 
         } catch (SQLException e) {
-            logger.warning("Unable to check if group exists " + e);
+            logger.warning("Unable to check if group exists\n" + e);
             throw new DbException("Unable to check if group exists", e);
         }
     }
@@ -597,14 +594,13 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
     @Override
     public void addGroup(Connection txn, Group g) throws DbException {
         String sql = "INSERT INTO groups"
-                + " (id, client_id, major_version, descriptor)"
-                + " VALUES (?, ?, ?, ?)";
+                + " (id, client_id, descriptor)"
+                + " VALUES (?, ?, ?)";
 
         try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
             prStatement.setBytes(1, g.getId().getBytes());
             prStatement.setString(2, g.getClientId().getString());
-            prStatement.setInt(3, g.getMajorVersion());
-            prStatement.setBytes(4, g.getDescriptor());
+            prStatement.setBytes(3, g.getDescriptor());
 
             prStatement.executeUpdate();
         } catch (SQLException e) {
@@ -618,9 +614,9 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
         String sql = "DELETE FROM groups WHERE group_id = ?";
 
         try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
-
             prStatement.setBytes(1, g.getBytes());
 
+            prStatement.executeUpdate();
         } catch (SQLException e) {
             logger.warning("Unable to remove group with a given id\n" + e);
             throw new DbException("Unable to remove group with a given id", e);
@@ -629,7 +625,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
 
     @Override
     public Contact getContact(Connection txn, IdentityId id) throws DbException {
-        String sql = "SELECT id, identity_id, local_identity_id, name, public_key"
+        String sql = "SELECT id, identity_id, local_identity_id, name, added_date, public_key"
                 + " FROM contacts"
                 + " WHERE identity_id = ?";
 
@@ -644,10 +640,11 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                 IdentityId identityId = new IdentityId(rs.getBytes(2));
                 IdentityId localIdentityId = new IdentityId(rs.getBytes(3));
                 String name = rs.getString(4);
-                PublicKey publicKey = new PublicKey(rs.getBytes(5));
+                LocalDate addedDate = LocalDate.parse(rs.getDate(5).toString());
+                PublicKey publicKey = new PublicKey(rs.getBytes(6));
 
                 Identity identity = new Identity(identityId, publicKey, name);
-                contact = new Contact(contactId, localIdentityId, identity);
+                contact = new Contact(contactId, localIdentityId, identity, addedDate);
             }
             return contact;
         } catch (SQLException e) {
@@ -658,7 +655,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
 
     @Override
     public Contact getContactById(Connection txn, ContactId contactId) throws DbException {
-        String sql = "SELECT identity_id, local_identity_id, name, public_key"
+        String sql = "SELECT identity_id, local_identity_id, name, added_date, public_key"
                 + " FROM contacts"
                 + " WHERE id = ?";
 
@@ -672,10 +669,11 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                 IdentityId identityId = new IdentityId(rs.getBytes(1));
                 IdentityId localIdentityId = new IdentityId(rs.getBytes(2));
                 String name = rs.getString(3);
-                PublicKey publicKey = new PublicKey(rs.getBytes(4));
+                LocalDate addedDate = LocalDate.parse(rs.getDate(4).toString());
+                PublicKey publicKey = new PublicKey(rs.getBytes(5));
 
                 Identity identity = new Identity(identityId, publicKey, name);
-                contact = new Contact(contactId, localIdentityId, identity);
+                contact = new Contact(contactId, localIdentityId, identity, addedDate);
             }
             return contact;
         } catch (SQLException e) {
@@ -719,7 +717,6 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                 + " WHERE state = ? AND message_id = ?";
 
         try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
-
             prStatement.setInt(1, DELIVERED.getValue());
             prStatement.setBytes(2, m.getBytes());
             ResultSet rs = prStatement.executeQuery();
@@ -740,9 +737,9 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
         String sql = "DELETE FROM messages WHERE id = ?";
 
         try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
-
             prStatement.setBytes(1, m.getBytes());
             int affected = prStatement.executeUpdate();
+
         } catch (SQLException e) {
             logger.warning("Unable to remove message with give id: " + m + "\n" + e);
             throw new DbException("Unable to remove message with give id: " + m, e);
@@ -764,7 +761,7 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             }
             return metadata;
         } catch (SQLException e) {
-            logger.warning("Unable to get group metadata " + e);
+            logger.warning("Unable to get group metadata\n" + e);
             throw new DbException("Unable to get group metadata " + e);
         }
     }
@@ -827,8 +824,95 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             }
             return added;
         } catch (SQLException e) {
-            logger.warning("Unable to remove or update metadata " + e);
+            logger.warning("Unable to remove or update metadata\n" + e);
             throw new DbException("Unable to remove or update metadata", e);
+        }
+    }
+
+    @Override
+    public boolean addKeysForContact(Connection txn, TransportKeys transportKeys) throws DbException {
+        String sql = "INSERT INTO keys"
+                + " (contact_id, outgoing_key, incoming_key)"
+                + " VALUES (?, ?, ?)";
+
+        try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
+            prStatement.setInt(1, transportKeys.getContactId().getInt());
+            prStatement.setBytes(2, transportKeys.getOutgoingKey().getBytes());
+            prStatement.setBytes(3, transportKeys.getIncomingKey().getBytes());
+
+            return prStatement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.info("Unable to add transport keys\n");
+            throw new DbException("Unable to add transport keys", e);
+        }
+    }
+
+    @Override
+    public TransportKeys getKeysForContact(Connection txn, ContactId contactId) throws DbException {
+        String sql = "SELECT key_set_id, outgoing_key, incoming_key" +
+                " FROM keys" +
+                " WHERE contact_id = ?";
+
+        try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
+            prStatement.setInt(1, contactId.getInt());
+
+            ResultSet rs = prStatement.executeQuery();
+            TransportKeys keys = null;
+            if (rs.next()) {
+                Integer keySetId = rs.getInt(1);
+                SecretKey outKey = new SecretKey(rs.getBytes(2));
+                SecretKey inKey = new SecretKey(rs.getBytes(3));
+
+                keys = new TransportKeys(keySetId, contactId, outKey, inKey);
+            }
+            return keys;
+
+        } catch (SQLException e) {
+            logger.info("Unable to add transport keys\n");
+            throw new DbException("Unable to add transport keys", e);
+        }
+    }
+
+    @Override
+    public List<TransportKeys> getAllTransportKeys(Connection txn) throws DbException {
+        String sql = "SELECT key_set_id, contact_id, outgoing_key, incoming_key" +
+                " FROM keys";
+
+        try (Statement statement = txn.createStatement()) {
+            ResultSet rs = statement.executeQuery(sql);
+            List<TransportKeys> keys = new ArrayList<>();
+            while (rs.next()) {
+                Integer keySetId = rs.getInt(1);
+                ContactId contactId = new ContactId(rs.getInt(2));
+                SecretKey outKey = new SecretKey(rs.getBytes(3));
+                SecretKey inKey = new SecretKey(rs.getBytes(4));
+
+                keys.add(new TransportKeys(keySetId, contactId, outKey, inKey));
+            }
+            return keys;
+
+        } catch (SQLException e) {
+            logger.info("Unable to get all transport keys\n");
+            throw new DbException("Unable to get all transport keys", e);
+        }
+    }
+
+    @Override
+    public boolean updateKeysForContact(Connection txn, TransportKeys transportKeys) throws DbException {
+        String sql = "UPDATE keys"
+                + " SET outgoing_key = ?, incoming_key = ?"
+                + " WHERE contact_id = ?";
+
+        try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
+            prStatement.setBytes(1, transportKeys.getOutgoingKey().getBytes());
+            prStatement.setBytes(2, transportKeys.getIncomingKey().getBytes());
+            prStatement.setInt(3, transportKeys.getContactId().getInt());
+
+            return prStatement.executeUpdate() > 0;
+        } catch (SQLException e) {
+            logger.info("Unable to update transport keys with contact id: "
+                    + transportKeys.getContactId() + "\n" + e);
+            throw new DbException("Unable to update transport keys", e);
         }
     }
 }

@@ -8,12 +8,13 @@ import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.identity.LocalIdentity;
 import com.eugene.wc.protocol.api.settings.Settings;
-import com.eugene.wc.protocol.api.sync.Group;
-import com.eugene.wc.protocol.api.sync.GroupId;
-import com.eugene.wc.protocol.api.sync.Message;
-import com.eugene.wc.protocol.api.sync.MessageId;
-import com.eugene.wc.protocol.api.sync.Metadata;
-import com.eugene.wc.protocol.api.sync.validation.MessageState;
+import com.eugene.wc.protocol.api.session.Group;
+import com.eugene.wc.protocol.api.session.GroupId;
+import com.eugene.wc.protocol.api.session.Message;
+import com.eugene.wc.protocol.api.session.MessageId;
+import com.eugene.wc.protocol.api.session.Metadata;
+import com.eugene.wc.protocol.api.session.validation.MessageState;
+import com.eugene.wc.protocol.api.transport.TransportKeys;
 
 import java.sql.Connection;
 import java.util.List;
@@ -32,7 +33,6 @@ public interface JdbcDatabase {
     void commitTransaction(Connection txn) throws DbException;
 
     void abortTransaction(Connection txn);
-
 
     Settings getSettings(Connection txn, String namespace) throws DbException;
 
@@ -75,5 +75,14 @@ public interface JdbcDatabase {
 
     void addMessage(Connection txn, Message m, MessageState state, boolean shared,
                     boolean temporary, @Nullable ContactId sender) throws DbException;
+
     void removeMessage(Connection txn, MessageId m) throws DbException;
+
+    boolean addKeysForContact(Connection txn, TransportKeys transportKeys) throws DbException;
+
+    TransportKeys getKeysForContact(Connection txn, ContactId contactId) throws DbException;
+
+    List<TransportKeys> getAllTransportKeys(Connection txn) throws DbException;
+
+    boolean updateKeysForContact(Connection txn, TransportKeys transportKeys) throws DbException;
 }

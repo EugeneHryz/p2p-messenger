@@ -7,13 +7,13 @@ import com.eugene.wc.contact.ContactListViewModel;
 import com.eugene.wc.contact.add.AddContactViewModel;
 import com.eugene.wc.home.HomeViewModel;
 import com.eugene.wc.login.StartupViewModel;
-import com.eugene.wc.signup.SignUpActivity;
 import com.eugene.wc.signup.SignUpViewModel;
 
 import javax.inject.Singleton;
 
 import dagger.Binds;
 import dagger.Module;
+import dagger.multibindings.ClassKey;
 import dagger.multibindings.IntoMap;
 
 @Module

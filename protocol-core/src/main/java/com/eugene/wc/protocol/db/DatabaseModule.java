@@ -3,7 +3,7 @@ package com.eugene.wc.protocol.db;
 import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
 import com.eugene.wc.protocol.api.db.DbExecutor;
-import com.eugene.wc.protocol.api.sync.MessageFactory;
+import com.eugene.wc.protocol.api.session.MessageFactory;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;

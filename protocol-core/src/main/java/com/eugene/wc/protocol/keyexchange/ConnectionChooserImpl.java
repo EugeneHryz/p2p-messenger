@@ -75,14 +75,6 @@ public class ConnectionChooserImpl implements ConnectionChooser {
     @Override
     public void close() {
         logger.info("Closing all unused connections");
-//        try {
-//            for (KeyExchangeConnection conn : connections) {
-//                conn.getConnection().getReader().dispose(false, true);
-//                conn.getConnection().getWriter().dispose(false);
-//            }
-//        } catch (IOException e) {
-//            logger.warning("Unable to dispose connection " + e);
-//        }
 
         List<KeyExchangeConnection> unused;
         lock.lock();

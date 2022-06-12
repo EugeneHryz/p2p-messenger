@@ -10,6 +10,7 @@ import javax.inject.Inject;
 
 class SettingsManagerImpl implements SettingsManager {
 
+	// TODO: implement
 //	private final DatabaseComponent db;
 
 	@Inject

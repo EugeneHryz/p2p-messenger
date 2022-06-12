@@ -1,16 +1,15 @@
 package com.eugene.wc.protocol.api.client;
 
 import com.eugene.wc.protocol.api.data.WdfDictionary2;
-import com.eugene.wc.protocol.api.data.WdfList;
 import com.eugene.wc.protocol.api.data.WdfList2;
 import com.eugene.wc.protocol.api.data.exception.FormatException;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
-import com.eugene.wc.protocol.api.sync.GroupId;
-import com.eugene.wc.protocol.api.sync.Message;
-import com.eugene.wc.protocol.api.sync.MessageId;
+import com.eugene.wc.protocol.api.session.GroupId;
+import com.eugene.wc.protocol.api.session.Message;
+import com.eugene.wc.protocol.api.session.MessageId;
 
 import java.sql.Connection;
 import java.util.Map;

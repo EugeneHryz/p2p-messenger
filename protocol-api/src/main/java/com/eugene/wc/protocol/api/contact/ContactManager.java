@@ -4,13 +4,14 @@ import com.eugene.wc.protocol.api.contact.exception.ContactAlreadyExistsExceptio
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityId;
+import com.eugene.wc.protocol.api.transport.Tag;
 
 import java.sql.Connection;
 import java.util.List;
 
 public interface ContactManager {
 
-    // is it good idea to ignore DbExceptions in these methods?
+    // fixme: is it good idea to ignore DbExceptions in these methods?
 
     void registerContactHook(ContactHook hook);
 
@@ -21,6 +22,10 @@ public interface ContactManager {
     Contact getContactById(ContactId contactId);
 
     List<Contact> getAllContacts();
+
+    ContactId recogniseContact(Tag tag);
+
+    boolean rotateContactKeys(ContactId contactId);
 
     interface ContactHook {
 

@@ -183,7 +183,6 @@ public class CameraView extends SurfaceView implements SurfaceHolder.Callback {
                 suitableSizes.add(s);
             }
         }
-//        Collections.sort(suitableSizes, new CompareSizesByArea());
 
         int listSize = suitableSizes.size();
         Size chosenSize = listSize != 0 ? suitableSizes.get(0) : null;

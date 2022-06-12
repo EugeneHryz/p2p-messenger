@@ -1,6 +1,6 @@
 package com.eugene.wc.protocol.db;
 
-import static com.eugene.wc.protocol.api.sync.validation.MessageState.DELIVERED;
+import static com.eugene.wc.protocol.api.session.validation.MessageState.DELIVERED;
 
 import com.eugene.wc.protocol.api.contact.Contact;
 import com.eugene.wc.protocol.api.contact.ContactId;
@@ -10,20 +10,19 @@ import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.DbCallable;
 import com.eugene.wc.protocol.api.db.DbRunnable;
 import com.eugene.wc.protocol.api.db.exception.DbException;
-import com.eugene.wc.protocol.api.db.exception.NoSuchContactException;
 import com.eugene.wc.protocol.api.db.exception.NoSuchGroupException;
 import com.eugene.wc.protocol.api.db.exception.NoSuchMessageException;
 import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.identity.LocalIdentity;
-import com.eugene.wc.protocol.api.sync.Group;
-import com.eugene.wc.protocol.api.sync.GroupId;
-import com.eugene.wc.protocol.api.sync.Message;
-import com.eugene.wc.protocol.api.sync.MessageId;
-import com.eugene.wc.protocol.api.sync.Metadata;
+import com.eugene.wc.protocol.api.session.Group;
+import com.eugene.wc.protocol.api.session.GroupId;
+import com.eugene.wc.protocol.api.session.Message;
+import com.eugene.wc.protocol.api.session.MessageId;
+import com.eugene.wc.protocol.api.session.Metadata;
+import com.eugene.wc.protocol.api.transport.TransportKeys;
 
 import java.sql.Connection;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -33,7 +32,6 @@ import javax.inject.Inject;
 public class DatabaseComponentImpl implements DatabaseComponent {
 
     private static final Logger logger = Logger.getLogger(DatabaseComponentImpl.class.getName());
-
     private final JdbcDatabase db;
 
     @Inject
@@ -89,7 +87,6 @@ public class DatabaseComponentImpl implements DatabaseComponent {
     public void addGroup(Connection txn, Group g) throws DbException {
         if (!db.containsGroup(txn, g.getId())) {
             db.addGroup(txn, g);
-            // fixme: groupAdded event removed
         }
     }
 
@@ -98,12 +95,8 @@ public class DatabaseComponentImpl implements DatabaseComponent {
         GroupId id = g.getId();
         if (!db.containsGroup(txn, id))
             throw new NoSuchGroupException();
-//        Collection<ContactId> affected = db.getGroupVisibility(txn, id).keySet();
         db.removeGroup(txn, id);
 
-        // fixme: removed events
-//        transaction.attach(new GroupRemovedEvent(g));
-//        transaction.attach(new GroupVisibilityUpdatedEvent(affected));
     }
 
     @Override
@@ -179,11 +172,6 @@ public class DatabaseComponentImpl implements DatabaseComponent {
         if (!db.containsMessage(txn, m.getId())) {
             db.addMessage(txn, m, DELIVERED, shared, temporary, null);
 
-            // fixme: removed events
-//            transaction.attach(new MessageAddedEvent(m, null));
-//            transaction.attach(new MessageStateChangedEvent(m.getId(), true,
-//                    DELIVERED));
-//            if (shared) transaction.attach(new MessageSharedEvent(m.getId()));
         }
         db.mergeMessageMetadata(txn, m.getId(), meta);
     }
@@ -200,6 +188,26 @@ public class DatabaseComponentImpl implements DatabaseComponent {
         if (!db.containsMessage(txn, m))
             throw new NoSuchMessageException();
         db.mergeMessageMetadata(txn, m, meta);
+    }
+
+    @Override
+    public void mergeContactKeys(Connection txn, TransportKeys keys) throws DbException {
+        TransportKeys existingKeys = db.getKeysForContact(txn, keys.getContactId());
+        if (existingKeys == null) {
+            db.addKeysForContact(txn, keys);
+        } else {
+            db.updateKeysForContact(txn, keys);
+        }
+    }
+
+    @Override
+    public TransportKeys getContactKeys(Connection txn, ContactId contactId) throws DbException {
+        return db.getKeysForContact(txn, contactId);
+    }
+
+    @Override
+    public List<TransportKeys> getAllTransportKeys(Connection txn) throws DbException {
+        return db.getAllTransportKeys(txn);
     }
 
 

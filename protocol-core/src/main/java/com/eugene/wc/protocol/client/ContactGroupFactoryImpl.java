@@ -6,9 +6,9 @@ import com.eugene.wc.protocol.api.contact.Contact;
 import com.eugene.wc.protocol.api.data.WdfList2;
 import com.eugene.wc.protocol.api.data.exception.FormatException;
 import com.eugene.wc.protocol.api.identity.IdentityId;
-import com.eugene.wc.protocol.api.sync.ClientId;
-import com.eugene.wc.protocol.api.sync.Group;
-import com.eugene.wc.protocol.api.sync.GroupFactory;
+import com.eugene.wc.protocol.api.session.ClientId;
+import com.eugene.wc.protocol.api.session.Group;
+import com.eugene.wc.protocol.api.session.GroupFactory;
 
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
@@ -29,17 +29,16 @@ public class ContactGroupFactoryImpl implements ContactGroupFactory {
 	}
 
 	@Override
-	public Group createLocalGroup(ClientId clientId, int majorVersion) {
-		return groupFactory.createGroup(clientId, majorVersion,
-				LOCAL_GROUP_DESCRIPTOR);
+	public Group createLocalGroup(ClientId clientId) {
+		return groupFactory.createGroup(clientId, LOCAL_GROUP_DESCRIPTOR);
 	}
 
 	@Override
-	public Group createContactGroup(ClientId clientId, int majorVersion, Contact contact) {
+	public Group createContactGroup(ClientId clientId, Contact contact) {
 		IdentityId local = contact.getLocalIdentityId();
 		IdentityId remote = contact.getIdentity().getId();
 		byte[] descriptor = createGroupDescriptor(local, remote);
-		return groupFactory.createGroup(clientId, majorVersion, descriptor);
+		return groupFactory.createGroup(clientId, descriptor);
 	}
 
 	private byte[] createGroupDescriptor(IdentityId local, IdentityId remote) {

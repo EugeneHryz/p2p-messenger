@@ -16,18 +16,17 @@ import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityFactory;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
-import com.eugene.wc.protocol.api.sync.GroupId;
-import com.eugene.wc.protocol.api.sync.Message;
-import com.eugene.wc.protocol.api.sync.MessageFactory;
-import com.eugene.wc.protocol.api.sync.MessageId;
-import com.eugene.wc.protocol.api.sync.Metadata;
+import com.eugene.wc.protocol.api.session.GroupId;
+import com.eugene.wc.protocol.api.session.Message;
+import com.eugene.wc.protocol.api.session.MessageFactory;
+import com.eugene.wc.protocol.api.session.MessageId;
+import com.eugene.wc.protocol.api.session.Metadata;
 import com.eugene.wc.protocol.data.WdfReaderImpl;
 import com.eugene.wc.protocol.data.WdfWriterImpl;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
@@ -263,12 +262,9 @@ public class ClientHelperImpl implements ClientHelper {
 	public TransportProperties parseTransportProperties(
 			WdfDictionary2 properties) throws FormatException {
 		// fixme: removed validation
-//		checkSize(properties, 0, MAX_PROPERTIES_PER_TRANSPORT);
 		TransportProperties p = new TransportProperties();
 		for (String key : properties.keySet()) {
-//			checkLength(key, 1, MAX_PROPERTY_LENGTH);
 			String value = properties.getString(key);
-//			checkLength(value, 1, MAX_PROPERTY_LENGTH);
 			p.put(key, value);
 		}
 		return p;

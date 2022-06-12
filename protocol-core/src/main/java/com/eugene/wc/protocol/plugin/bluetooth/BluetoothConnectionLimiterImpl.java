@@ -6,9 +6,7 @@ import static java.util.logging.Logger.getLogger;
 
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
-import com.eugene.wc.protocol.api.sync.event.CloseSyncConnectionsEvent;
-
-import org.apache.commons.lang3.ArrayUtils;
+import com.eugene.wc.protocol.api.session.event.CloseSyncConnectionsEvent;
 
 import java.util.LinkedList;
 import java.util.List;

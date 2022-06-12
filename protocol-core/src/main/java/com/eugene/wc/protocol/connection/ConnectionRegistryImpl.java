@@ -42,16 +42,11 @@ class ConnectionRegistryImpl implements ConnectionRegistry {
 	@GuardedBy("lock")
 	private final Map<ContactId, List<ConnectionRecord>> contactConnections;
 
-	// fixme: pending contacts removed
-//	@GuardedBy("lock")
-//	private final Set<PendingContactId> connectedPendingContacts;
-
 	@Inject
     ConnectionRegistryImpl(EventBus eventBus, PluginConfig pluginConfig) {
 		this.eventBus = eventBus;
 		transportPrefs = pluginConfig.getTransportPreferences();
 		contactConnections = new HashMap<>();
-//		connectedPendingContacts = new HashSet<>();
 	}
 
 	@Override
@@ -120,14 +115,7 @@ class ConnectionRegistryImpl implements ConnectionRegistry {
 		}
 		if (interruptNewConnection) {
 			LOG.info("Interrupting new connection");
-			// fixme: removed
-//			conn.interruptOutgoingSession();
 		}
-		// fixme: removed
-//		for (InterruptibleConnection old : toInterrupt) {
-//			LOG.info("Interrupting old connection");
-//			old.interruptOutgoingSession();
-//		}
 	}
 
 	private int compareConnections(TransportId tA, Priority pA, TransportId tB,

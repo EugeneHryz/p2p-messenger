@@ -2,6 +2,7 @@ package com.eugene.wc.protocol.transport;
 
 import com.eugene.wc.protocol.api.transport.EncryptedPacket;
 import com.eugene.wc.protocol.api.transport.TransportWriter;
+import com.eugene.wc.protocol.api.util.ByteUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -19,7 +20,9 @@ public class TransportWriterImpl implements TransportWriter {
         output.write(packet.getTag().getBytes());
 
         byte[] content = packet.getContent();
-        writeInteger32(content.length);
+        byte[] contentLength = new byte[ByteUtils.INT_32_BYTES];
+        ByteUtils.writeUint32(content.length, contentLength, 0);
+        output.write(contentLength);
         output.write(content);
     }
 
@@ -31,11 +34,5 @@ public class TransportWriterImpl implements TransportWriter {
     @Override
     public void close() throws IOException {
         output.close();
-    }
-
-    private void writeInteger32(int value) throws IOException {
-        for (int i = 24; i >= 0; i -= 8) {
-            output.write(value >> i);
-        }
     }
 }

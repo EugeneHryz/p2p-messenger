@@ -1,7 +1,5 @@
 package com.eugene.wc.protocol.api.data;
 
-import com.eugene.wc.protocol.api.plugin.TransportId;
-
 import java.util.ArrayList;
 import java.util.Collection;
 

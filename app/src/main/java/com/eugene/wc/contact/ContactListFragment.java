@@ -92,7 +92,6 @@ public class ContactListFragment extends BaseFragment {
     }
 
     private void updateContactItems(Predicate<ContactItem> shouldUpdate) {
-        Log.d(TAG, "About to update contact status...");
         List<ContactItem> allItems = viewModel.getContacts().getValue();
         if (allItems != null) {
             for (ContactItem c : allItems) {

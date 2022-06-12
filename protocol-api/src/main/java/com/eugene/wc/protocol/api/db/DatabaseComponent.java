@@ -8,11 +8,12 @@ import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.identity.LocalIdentity;
-import com.eugene.wc.protocol.api.sync.Group;
-import com.eugene.wc.protocol.api.sync.GroupId;
-import com.eugene.wc.protocol.api.sync.Message;
-import com.eugene.wc.protocol.api.sync.MessageId;
-import com.eugene.wc.protocol.api.sync.Metadata;
+import com.eugene.wc.protocol.api.session.Group;
+import com.eugene.wc.protocol.api.session.GroupId;
+import com.eugene.wc.protocol.api.session.Message;
+import com.eugene.wc.protocol.api.session.MessageId;
+import com.eugene.wc.protocol.api.session.Metadata;
+import com.eugene.wc.protocol.api.transport.TransportKeys;
 
 import java.sql.Connection;
 import java.util.List;
@@ -35,8 +36,8 @@ public interface DatabaseComponent {
 
     LocalIdentity getLocalIdentity(Connection txn) throws DbException;
 
-    ContactId createContact(Connection txn, Identity remote, IdentityId localId) throws DbException,
-            ContactAlreadyExistsException;
+    ContactId createContact(Connection txn, Identity remote, IdentityId localId)
+            throws DbException, ContactAlreadyExistsException;
 
     boolean containsGroup(Connection txn, GroupId g) throws DbException;
 
@@ -60,17 +61,23 @@ public interface DatabaseComponent {
 
     void removeMessage(Connection txn, MessageId m) throws DbException;
 
-    void addLocalMessage(Connection transaction, Message m, Metadata meta, boolean shared, boolean temporary)
-            throws DbException;
+    void addLocalMessage(Connection transaction, Message m, Metadata meta, boolean shared,
+                         boolean temporary) throws DbException;
 
     void mergeMessageMetadata(Connection txn, MessageId m, Metadata meta) throws DbException;
 
     void mergeGroupMetadata(Connection txn, GroupId g, Metadata meta) throws DbException;
 
+    void mergeContactKeys(Connection txn, TransportKeys keys) throws DbException;
 
-    <E extends Exception> void runInTransaction(boolean readOnly,
-                                                DbRunnable<E> task) throws DbException, E;
+    TransportKeys getContactKeys(Connection txn, ContactId contactId) throws DbException;
 
-    <R, E extends Exception> R runInTransactionWithResult(boolean readOnly,
-                                                          DbCallable<R, E> task) throws DbException, E;
+    List<TransportKeys> getAllTransportKeys(Connection txn) throws DbException;
+
+
+    <E extends Exception> void runInTransaction(boolean readOnly, DbRunnable<E> task)
+            throws DbException, E;
+
+    <R, E extends Exception> R runInTransactionWithResult(boolean readOnly, DbCallable<R, E> task)
+            throws DbException, E;
 }

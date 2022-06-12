@@ -3,7 +3,7 @@ package com.eugene.wc.protocol.api.properties;
 import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.plugin.TransportId;
-import com.eugene.wc.protocol.api.sync.ClientId;
+import com.eugene.wc.protocol.api.session.ClientId;
 
 import java.sql.Connection;
 import java.util.Map;
@@ -14,16 +14,6 @@ public interface TransportPropertyManager {
 	 * The unique ID of the transport property client.
 	 */
 	ClientId CLIENT_ID = new ClientId("com.eugene.wc.protocol.properties");
-
-	/**
-	 * The current major version of the transport property client.
-	 */
-	int MAJOR_VERSION = 0;
-
-	/**
-	 * The current minor version of the transport property client.
-	 */
-	int MINOR_VERSION = 0;
 
 	/**
 	 * Stores the given properties received while adding a contact - they will

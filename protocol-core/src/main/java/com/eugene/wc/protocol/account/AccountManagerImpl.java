@@ -28,18 +28,16 @@ public class AccountManagerImpl implements AccountManager {
 
     private static final String DB_KEY_FILENAME = "db.key";
 
-    private final DatabaseConfig dbConfig;
     private final CryptoComponent cryptoComponent;
     private final IdentityManager identityManager;
 
-    private File dbFeyFile;
+    private final File dbFeyFile;
 
     private SecretKey secretKey;
 
     @Inject
     public AccountManagerImpl(DatabaseConfig dbConfig, CryptoComponent crypto,
                               IdentityManager identityManager) {
-        this.dbConfig = dbConfig;
         cryptoComponent = crypto;
         this.identityManager = identityManager;
 

@@ -5,10 +5,7 @@ import static java.util.Collections.singletonMap;
 
 import android.media.Image;
 import android.media.ImageReader;
-import android.os.Handler;
-import android.os.HandlerThread;
 
-import com.eugene.wc.protocol.api.io.IoExecutor;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.LuminanceSource;
 import com.google.zxing.PlanarYUVLuminanceSource;
@@ -19,11 +16,8 @@ import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
-
-import javax.inject.Inject;
 
 public class QrCodeDecoder implements ImageConsumer {
 
@@ -71,7 +65,7 @@ public class QrCodeDecoder implements ImageConsumer {
             callback.onQrCodeDecoded(result.getText());
             logger.info("Decoded result: " + result.getText());
         } catch (ReaderException e) {
-            logger.warning("Unable to decode: " + e);
+//            logger.warning("Unable to decode: " + e);
         } finally {
             reader.reset();
         }

@@ -3,7 +3,7 @@ package com.eugene.wc.protocol.db;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
 import com.eugene.wc.protocol.api.db.exception.DbException;
-import com.eugene.wc.protocol.api.sync.MessageFactory;
+import com.eugene.wc.protocol.api.session.MessageFactory;
 import com.eugene.wc.protocol.api.util.IoUtils;
 import com.eugene.wc.protocol.api.util.StringUtils;
 
@@ -21,9 +21,10 @@ public class H2Database extends AbstractJdbcDatabase {
     private static final String HASH_TYPE = "BINARY(32)";
     private static final String BINARY_TYPE = "BINARY";
     private static final String COUNTER_TYPE = "INTEGER NOT NULL AUTO_INCREMENT";
+    private static final String SECRET_TYPE = "BINARY(32)";
 
     private static final DatabaseTypes dbTypes = new DatabaseTypes(STRING_TYPE, HASH_TYPE,
-            BINARY_TYPE, COUNTER_TYPE);
+            BINARY_TYPE, COUNTER_TYPE, SECRET_TYPE);
 
     private final DatabaseConfig dbConfig;
     private final String url;

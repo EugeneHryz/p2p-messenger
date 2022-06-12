@@ -18,10 +18,10 @@ import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
 import com.eugene.wc.protocol.api.properties.TransportPropertyManager;
-import com.eugene.wc.protocol.api.sync.Group;
-import com.eugene.wc.protocol.api.sync.GroupId;
-import com.eugene.wc.protocol.api.sync.Message;
-import com.eugene.wc.protocol.api.sync.MessageId;
+import com.eugene.wc.protocol.api.session.Group;
+import com.eugene.wc.protocol.api.session.GroupId;
+import com.eugene.wc.protocol.api.session.Message;
+import com.eugene.wc.protocol.api.session.MessageId;
 import com.eugene.wc.protocol.api.system.Clock;
 
 import java.sql.Connection;
@@ -43,7 +43,6 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 
 	private final DatabaseComponent db;
 	private final ClientHelper clientHelper;
-//	private final ClientVersioningManager clientVersioningManager;
 	private final MetadataParser metadataParser;
 	private final ContactGroupFactory contactGroupFactory;
 	private final Clock clock;
@@ -60,7 +59,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 		this.contactGroupFactory = contactGroupFactory;
 		this.clock = clock;
 
-		localGroup = contactGroupFactory.createLocalGroup(CLIENT_ID, MAJOR_VERSION);
+		localGroup = contactGroupFactory.createLocalGroup(CLIENT_ID);
 	}
 
 	@Override
@@ -72,7 +71,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 			// Set things up for any pre-existing contacts
 			for (Contact c : db.getAllContacts(txn)) addingContact(txn, c);
 		} catch (DbException e) {
-			e.printStackTrace();
+			logger.warning(e.toString());
 		}
 	}
 
@@ -83,13 +82,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 		Group g = getContactGroup(c);
 		logger.info("adding group to a db a contact");
 		db.addGroup(txn, g);
-		// Apply the client's visibility to the contact group
-		// fixme: removed
-//		Visibility client = clientVersioningManager.getClientVisibility(txn,
-//				c.getId(), CLIENT_ID, MAJOR_VERSION);
-//		db.setGroupVisibility(txn, c.getId(), g.getId(), client);
 
-		// Copy the latest local properties into the group
 		Map<TransportId, TransportProperties> local = getLocalProperties(txn);
 		for (Entry<TransportId, TransportProperties> e : local.entrySet()) {
 			storeMessage(txn, g.getId(), e.getKey(), e.getValue(), 1,
@@ -101,41 +94,6 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	public void removingContact(Connection txn, Contact c) throws DbException {
 		db.removeGroup(txn, getContactGroup(c));
 	}
-
-//	@Override
-//	public void onClientVisibilityChanging(Transaction txn, Contact c,
-//			Visibility v) throws DbException {
-//		// Apply the client's visibility to the contact group
-//		Group g = getContactGroup(c);
-//		db.setGroupVisibility(txn, c.getId(), g.getId(), v);
-//	}
-
-//	@Override
-//	public DeliveryAction incomingMessage(Transaction txn, Message m,
-//			Metadata meta) throws DbException, InvalidMessageException {
-//		try {
-//			// Find the latest update for this transport, if any
-//			BdfDictionary d = metadataParser.parse(meta);
-//			TransportId t = new TransportId(d.getString(MSG_KEY_TRANSPORT_ID));
-//			LatestUpdate latest = findLatest(txn, m.getGroupId(), t, false);
-//			if (latest != null) {
-//				if (d.getLong(MSG_KEY_VERSION) > latest.version) {
-//					// This update is newer - delete the previous update
-//					db.deleteMessage(txn, latest.messageId);
-//					db.deleteMessageMetadata(txn, latest.messageId);
-//				} else {
-//					// We've already received a newer update - delete this one
-//					db.deleteMessage(txn, m.getId());
-//					db.deleteMessageMetadata(txn, m.getId());
-//					return ACCEPT_DO_NOT_SHARE;
-//				}
-//			}
-//			txn.attach(new RemoteTransportPropertiesUpdatedEvent(t));
-//		} catch (FormatException e) {
-//			throw new InvalidMessageException(e);
-//		}
-//		return ACCEPT_DO_NOT_SHARE;
-//	}
 
 	@Override
 	public void addRemoteProperties(Connection txn, ContactId c, Map<TransportId, TransportProperties> props)
@@ -254,7 +212,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	}
 
 	private TransportProperties getRemoteProperties(Connection txn, Contact c,
-			TransportId t) throws DbException {
+													TransportId t) throws DbException {
 		Group g = getContactGroup(c);
 		try {
 			// Find the latest remote update
@@ -363,8 +321,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	}
 
 	private Group getContactGroup(Contact c) {
-		return contactGroupFactory.createContactGroup(CLIENT_ID,
-				MAJOR_VERSION, c);
+		return contactGroupFactory.createContactGroup(CLIENT_ID, c);
 	}
 
 	private void storeMessage(Connection txn, GroupId g, TransportId t,

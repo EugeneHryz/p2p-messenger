@@ -2,6 +2,7 @@ package com.eugene.wc.protocol.keyexchange.record;
 
 import com.eugene.wc.protocol.api.keyexchange.record.Record;
 import com.eugene.wc.protocol.api.keyexchange.record.RecordWriter;
+import com.eugene.wc.protocol.api.util.ByteUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -19,7 +20,10 @@ public class RecordWriterImpl implements RecordWriter {
         output.write(record.getType());
         byte[] content = record.getContent();
         int length = content.length;
-        writeInteger32(length);
+
+        byte[] lengthBytes = new byte[ByteUtils.INT_32_BYTES];
+        ByteUtils.writeUint32(length, lengthBytes, 0);
+        output.write(lengthBytes);
         output.write(content);
     }
 
@@ -31,11 +35,5 @@ public class RecordWriterImpl implements RecordWriter {
     @Override
     public void close() throws IOException {
         output.close();
-    }
-
-    private void writeInteger32(int value) throws IOException {
-        for (int i = 24; i >= 0; i -= 8) {
-            output.write(value >> i);
-        }
     }
 }

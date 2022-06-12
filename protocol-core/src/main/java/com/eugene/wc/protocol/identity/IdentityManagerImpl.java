@@ -7,6 +7,7 @@ import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityFactory;
 import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.identity.LocalIdentity;
+import com.eugene.wc.protocol.api.transport.TransportKeys;
 
 import java.sql.Connection;
 import java.util.logging.Logger;
@@ -42,17 +43,6 @@ public class IdentityManagerImpl implements IdentityManager, DatabaseOpenListene
                 dbComponent.createLocalIdentity(txn, cachedIdentity);
             } catch (DbException e) {
                 logger.warning("Unable to create local identity " + e);
-            }
-        } else {
-            try {
-                LocalIdentity local = dbComponent.getLocalIdentity(txn);
-                if (local != null) {
-                    logger.info("Identity name: " + local.getName());
-                } else {
-                    logger.info("Identity is null");
-                }
-            } catch (DbException e) {
-                logger.warning("Unable to get local identity " + e);
             }
         }
     }

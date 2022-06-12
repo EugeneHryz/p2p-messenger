@@ -13,5 +13,5 @@ public final class TransportConstants {
     public static final String BOB_KEY = "com.eugene.wc.protocol.transport.bob_key";
 
 
-
+    public static final String KEY_ROTATION = "com.eugene.wc.protocol.transport.rotation";
 }

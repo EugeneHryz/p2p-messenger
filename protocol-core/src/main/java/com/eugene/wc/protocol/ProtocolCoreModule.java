@@ -4,6 +4,7 @@ import com.eugene.wc.protocol.account.AccountManagerModule;
 import com.eugene.wc.protocol.client.ClientModule;
 import com.eugene.wc.protocol.connection.ConnectionModule;
 import com.eugene.wc.protocol.contact.ContactModule;
+import com.eugene.wc.protocol.conversation.ConversationModule;
 import com.eugene.wc.protocol.crypto.CryptoModule;
 import com.eugene.wc.protocol.data.DataModule;
 import com.eugene.wc.protocol.db.DatabaseModule;
@@ -15,7 +16,7 @@ import com.eugene.wc.protocol.lifecycle.LifecycleModule;
 import com.eugene.wc.protocol.plugin.PluginModule;
 import com.eugene.wc.protocol.properties.PropertiesModule;
 import com.eugene.wc.protocol.settings.SettingsModule;
-import com.eugene.wc.protocol.sync.SyncModule;
+import com.eugene.wc.protocol.session.SessionModule;
 
 import dagger.Module;
 
@@ -31,9 +32,10 @@ import dagger.Module;
                     IdentityModule.class,
                     ContactModule.class,
                     ClientModule.class,
-                    SyncModule.class,
+                    SessionModule.class,
                     PropertiesModule.class,
                     DataModule.class,
-                    ConnectionModule.class})
+                    ConnectionModule.class,
+                    ConversationModule.class})
 public class ProtocolCoreModule {
 }

@@ -2,11 +2,8 @@ package com.eugene.wc.protocol.contact.exchange;
 
 import com.eugene.wc.protocol.api.Pair;
 import com.eugene.wc.protocol.api.client.ClientHelper;
-import com.eugene.wc.protocol.api.contact.Contact;
 import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.ContactManager;
-import com.eugene.wc.protocol.api.contact.event.ContactExchangeFailedEvent;
-import com.eugene.wc.protocol.api.contact.event.ContactExchangeFinishedEvent;
 import com.eugene.wc.protocol.api.contact.exception.ContactAlreadyExistsException;
 import com.eugene.wc.protocol.api.contact.exception.ContactExchangeException;
 import com.eugene.wc.protocol.api.contact.exchange.ContactExchangeKeyManager;
@@ -26,6 +23,7 @@ import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeResult;
 import com.eugene.wc.protocol.api.plugin.TransportId;
+import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
 import com.eugene.wc.protocol.api.properties.TransportPropertyManager;
 import com.eugene.wc.protocol.api.transport.EncryptedPacket;
@@ -49,46 +47,35 @@ public class ContactExchangeManagerImpl implements ContactExchangeManager {
     private final IdentityManager identityManager;
     private final ContactExchangeKeyManager keyManager;
     private final CryptoComponent crypto;
-    private final EventBus eventBus;
     private final ContactManager contactManager;
     private final ClientHelper clientHelper;
     private final TransportPropertyManager tpm;
     private final DatabaseComponent db;
 
-    private final SecretKey masterKey;
     private final boolean isAlice;
 
     private TransportReader transportReader;
     private TransportWriter transportWriter;
 
-    public ContactExchangeManagerImpl(KeyExchangeResult result, IdentityManager identityManager,
-                                      CryptoComponent crypto, EventBus eventBus,
-                                      ContactManager contactManager, ClientHelper clientHelper,
-                                      TransportPropertyManager tpm, DatabaseComponent db) {
+    public ContactExchangeManagerImpl(KeyExchangeResult result,
+                                      IdentityManager identityManager,
+                                      CryptoComponent crypto,
+                                      ContactManager contactManager,
+                                      ClientHelper clientHelper,
+                                      TransportPropertyManager tpm,
+                                      DatabaseComponent db) {
         this.identityManager = identityManager;
         this.crypto = crypto;
-        this.eventBus = eventBus;
         this.contactManager = contactManager;
         this.clientHelper = clientHelper;
         this.tpm = tpm;
         this.db = db;
-        masterKey = result.getMasterKey();
         isAlice = result.isAlice();
 
-        keyManager = new ContactExchangeKeyManagerImpl(isAlice, crypto);
-        keyManager.generateInitialKeys(masterKey);
+        keyManager = new ContactExchangeKeyManagerImpl(isAlice, crypto, db);
+        keyManager.generateInitialKeys(result.getMasterKey());
 
-        try {
-            OutputStream out = result.getTransport().getConnection().getWriter().getOutputStream();
-            InputStream in = result.getTransport().getConnection().getReader().getInputStream();
-
-            transportWriter = new TransportWriterImpl(out);
-            transportReader = new TransportReaderImpl(in);
-
-        } catch (IOException e) {
-            logger.severe("Unable to initialize");
-            throw new AssertionError(e);
-        }
+        initReaderAndWriter(result.getTransport().getConnection());
     }
 
     @Override
@@ -98,22 +85,18 @@ public class ContactExchangeManagerImpl implements ContactExchangeManager {
 
     private ContactId performExchange() throws ContactExchangeException {
         Identity localIdentity;
+        Map<TransportId, TransportProperties> localProps;
         try {
             localIdentity = identityManager.getIdentity();
+            localProps = tpm.getLocalProperties();
+
         } catch (DbException e) {
-            logger.warning("Unable to load local identity " + e);
-            throw new ContactExchangeException("Unable to load local identity", e);
+            logger.warning("Unable to load local identity data\n" + e);
+            throw new ContactExchangeException("Unable to load local identity data", e);
         }
         if (localIdentity == null) {
             logger.warning("Identity is null");
             throw new ContactExchangeException("Identity is null");
-        }
-        Map<TransportId, TransportProperties> localProps;
-        try {
-            localProps = tpm.getLocalProperties();
-        } catch (DbException e) {
-            logger.warning("Unable to get local properties\n" + e);
-            throw new ContactExchangeException("Unable to get local transport properties", e);
         }
 
         try {
@@ -133,7 +116,6 @@ public class ContactExchangeManagerImpl implements ContactExchangeManager {
             } catch (ContactAlreadyExistsException | DbException e) {
                 throw new ContactExchangeException("Unable to add contact", e);
             }
-
         } catch (IOException | CryptoException e) {
             logger.warning("Unable to perform contact exchange " + e);
             throw new ContactExchangeException("Unable to perform contact exchange", e);
@@ -148,7 +130,7 @@ public class ContactExchangeManagerImpl implements ContactExchangeManager {
             txn = db.startTransaction(false);
 
             contactId = contactManager.createContact(txn, contactInfo.getIdentity(), localId);
-            logger.info("Adding remote properties of a contact " + contactInfo.getIdentity().getName());
+            keyManager.saveLastGeneratedKeys(txn, contactId);
             tpm.addRemoteProperties(txn, contactId, contactInfo.getProperties());
 
             db.commitTransaction(txn);
@@ -194,5 +176,19 @@ public class ContactExchangeManagerImpl implements ContactExchangeManager {
                 .parseTransportPropertiesMap(propertiesAsDictionary);
 
         return new ContactInfo(identity, propsMap);
+    }
+
+    private void initReaderAndWriter(DuplexTransportConnection conn) {
+        try {
+            OutputStream out = conn.getWriter().getOutputStream();
+            InputStream in = conn.getReader().getInputStream();
+
+            transportWriter = new TransportWriterImpl(out);
+            transportReader = new TransportReaderImpl(in);
+
+        } catch (IOException e) {
+            logger.severe("Unable to initialize TransportReader and TransportWriter\n" + e);
+            throw new RuntimeException(e);
+        }
     }
 }

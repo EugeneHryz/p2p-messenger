@@ -5,6 +5,7 @@ import static com.eugene.wc.protocol.api.transport.TransportConstants.TAG_LENGTH
 import com.eugene.wc.protocol.api.transport.EncryptedPacket;
 import com.eugene.wc.protocol.api.transport.Tag;
 import com.eugene.wc.protocol.api.transport.TransportReader;
+import com.eugene.wc.protocol.api.util.ByteUtils;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -25,7 +26,9 @@ public class TransportReaderImpl implements TransportReader {
         byte[] tagBytes = new byte[TAG_LENGTH];
         input.readFully(tagBytes);
 
-        int contentLength = readInteger32();
+        byte[] lengthBytes = new byte[ByteUtils.INT_32_BYTES];
+        input.readFully(lengthBytes);
+        int contentLength = (int) ByteUtils.readUint32(lengthBytes, 0);
         byte[] content = new byte[contentLength];
         input.readFully(content);
 
@@ -35,14 +38,5 @@ public class TransportReaderImpl implements TransportReader {
     @Override
     public void close() throws IOException {
         input.close();
-    }
-
-    private int readInteger32() throws IOException {
-        int value = 0;
-        for (int i = 24; i >= 0; i -= 8) {
-            int nextByte = input.read();
-            value |= (nextByte << i);
-        }
-        return value;
     }
 }

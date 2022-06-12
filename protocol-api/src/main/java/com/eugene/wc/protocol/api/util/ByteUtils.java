@@ -2,35 +2,21 @@ package com.eugene.wc.protocol.api.util;
 
 public class ByteUtils {
 
-	/**
-	 * The maximum value that can be represented as an unsigned 16-bit integer.
-	 */
 	public static final int MAX_16_BIT_UNSIGNED = 65535; // 2^16 - 1
 
 //	/**
 //	 * The maximum value that can be represented as an unsigned 32-bit integer.
 //	 */
 //	public static final long MAX_32_BIT_UNSIGNED = 4294967295L; // 2^32 - 1
-//
-//	/** The number of bytes needed to encode a 16-bit integer. */
-//	public static final int INT_16_BYTES = 2;
 
 	/** The number of bytes needed to encode a 32-bit integer. */
 	public static final int INT_32_BYTES = 4;
 
 	/** The number of bytes needed to encode a 64-bit integer. */
 	public static final int INT_64_BYTES = 8;
-//
-//	public static void writeUint16(int src, byte[] dest, int offset) {
-//		if (src < 0) throw new IllegalArgumentException();
-//		if (src > MAX_16_BIT_UNSIGNED) throw new IllegalArgumentException();
-//		if (dest.length < offset + INT_16_BYTES)
-//			throw new IllegalArgumentException();
-//		dest[offset] = (byte) (src >> 8);
-//		dest[offset + 1] = (byte) (src & 0xFF);
-//	}
-//
-	public static void writeUint32(int src, byte[] dest, int offset) {
+
+
+	public static void writeUint32(long src, byte[] dest, int offset) {
 		if (src < 0) throw new IllegalArgumentException();
 		if (dest.length < offset + INT_32_BYTES)
 			throw new IllegalArgumentException();
@@ -53,22 +39,16 @@ public class ByteUtils {
 		dest[offset + 6] = (byte) (src >> 8 & 0xFF);
 		dest[offset + 7] = (byte) (src & 0xFF);
 	}
-//
-//	public static int readUint16(byte[] src, int offset) {
-//		if (src.length < offset + INT_16_BYTES)
-//			throw new IllegalArgumentException();
-//		return ((src[offset] & 0xFF) << 8) | (src[offset + 1] & 0xFF);
-//	}
-//
-//	public static long readUint32(byte[] src, int offset) {
-//		if (src.length < offset + INT_32_BYTES)
-//			throw new IllegalArgumentException();
-//		return ((src[offset] & 0xFFL) << 24)
-//				| ((src[offset + 1] & 0xFFL) << 16)
-//				| ((src[offset + 2] & 0xFFL) << 8)
-//				| (src[offset + 3] & 0xFFL);
-//	}
-//
+
+	public static long readUint32(byte[] src, int offset) {
+		if (src.length < offset + INT_32_BYTES)
+			throw new IllegalArgumentException();
+		return ((src[offset] & 0xFFL) << 24)
+				| ((src[offset + 1] & 0xFFL) << 16)
+				| ((src[offset + 2] & 0xFFL) << 8)
+				| (src[offset + 3] & 0xFFL);
+	}
+
 	public static long readUint64(byte[] src, int offset) {
 		if (src.length < offset + INT_64_BYTES)
 			throw new IllegalArgumentException();

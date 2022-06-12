@@ -1,7 +1,5 @@
 package com.eugene.wc.contact;
 
-import android.util.Log;
-
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -17,6 +15,7 @@ import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.event.EventListener;
 import com.eugene.wc.protocol.api.plugin.event.ContactConnectedEvent;
 import com.eugene.wc.protocol.api.plugin.event.ContactDisconnectedEvent;
+import com.eugene.wc.protocol.api.transport.TransportKeys;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -68,14 +67,12 @@ public class ContactListViewModel extends ViewModel implements EventListener {
             ContactConnectedEvent event = (ContactConnectedEvent) e;
             Contact c = contactManager.getContactById(event.getContactId());
 
-            Log.d(TAG, "Contact connected: " + c.getIdentity().getName());
             updateContactStatus(c.getId(), true);
 
         } else if (e instanceof ContactDisconnectedEvent) {
             ContactDisconnectedEvent event = (ContactDisconnectedEvent) e;
             Contact c = contactManager.getContactById(event.getContactId());
 
-            Log.d(TAG, "Contact disconnected: " + c.getIdentity().getName());
             updateContactStatus(c.getId(), false);
         }
     }
@@ -100,7 +97,6 @@ public class ContactListViewModel extends ViewModel implements EventListener {
             }
             if (contactToUpdate != null) {
                 contactToUpdate.setStatus(newStatus);
-                Log.d(TAG, "About to post update predicate");
                 shouldUpdate.postValue((item) -> item.getId().equals(contactId));
             }
         }

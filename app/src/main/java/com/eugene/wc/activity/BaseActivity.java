@@ -14,8 +14,6 @@ import com.eugene.wc.fragment.BaseFragment;
 
 public abstract class BaseActivity extends AppCompatActivity {
 
-    // lifecycle listeners?
-
     protected ActivityComponent activityComponent;
 
     protected abstract void injectActivity(ActivityComponent component);

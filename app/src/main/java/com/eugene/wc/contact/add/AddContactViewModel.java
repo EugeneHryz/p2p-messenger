@@ -1,10 +1,19 @@
 package com.eugene.wc.contact.add;
 
+import static com.eugene.wc.work.TransportKeyRotationWork.CONTACT_ID_KEY;
+import static com.eugene.wc.work.TransportKeyRotationWork.WORK_TAG;
+
+import android.app.Application;
 import android.util.Log;
 
+import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.ViewModel;
+import androidx.work.Data;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
 
 import com.eugene.wc.protocol.api.client.ClientHelper;
 import com.eugene.wc.protocol.api.connection.ConnectionManager;
@@ -43,19 +52,20 @@ import com.eugene.wc.protocol.data.StreamDataWriterImpl;
 import com.eugene.wc.protocol.keyexchange.PayloadDecoderImpl;
 import com.eugene.wc.protocol.keyexchange.PayloadEncoderImpl;
 import com.eugene.wc.qrcode.QrCodeDecoder;
+import com.eugene.wc.work.TransportKeyRotationWork;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 
-public class AddContactViewModel extends ViewModel implements EventListener, QrCodeDecoder.Callback {
+public class AddContactViewModel extends AndroidViewModel implements EventListener, QrCodeDecoder.Callback {
 
     private static final String TAG = AddContactViewModel.class.getName();
 
@@ -89,11 +99,13 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
     private boolean startedListening;
 
     @Inject
-    public AddContactViewModel(CryptoComponent crypto, EventBus eventBus,
-                               @IoExecutor Executor ioExecutor, KeyExchangeTask ket,
-                               IdentityManager identityManager, ContactManager contactManager,
-                               ClientHelper clientHelper, TransportPropertyManager tpm,
-                               DatabaseComponent db, ConnectionManager connectionManager) {
+    public AddContactViewModel(Application app, CryptoComponent crypto,
+                               EventBus eventBus, @IoExecutor Executor ioExecutor,
+                               KeyExchangeTask ket, IdentityManager identityManager,
+                               ContactManager contactManager, ClientHelper clientHelper,
+                               TransportPropertyManager tpm, DatabaseComponent db,
+                               ConnectionManager connectionManager) {
+        super(app);
         this.identityManager = identityManager;
         this.crypto = crypto;
         this.contactManager = contactManager;
@@ -105,20 +117,15 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
         this.ioExecutor = ioExecutor;
         this.ket = ket;
 
-        Log.d(TAG, "Registering me as a listener");
         eventBus.addListener(this);
     }
 
     @Override
     protected void onCleared() {
-        Log.d(TAG, "Destroying this viewModel");
         eventBus.removeListener(this);
 
         if (startedListening) {
-            ioExecutor.execute(() -> {
-                ket.stopListening();
-                Log.d(TAG, "Stopped listening");
-            });
+            ioExecutor.execute(ket::stopListening);
         }
     }
 
@@ -192,7 +199,7 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
 
     private void startContactExchange(KeyExchangeResult result) {
         ContactExchangeManager cem = new ContactExchangeManagerImpl(result, identityManager,
-                crypto, eventBus, contactManager, clientHelper, tpm, db);
+                crypto, contactManager, clientHelper, tpm, db);
 
         DuplexTransportConnection conn = result.getTransport().getConnection();
         TransportId transportId = result.getTransport().getTransportId();
@@ -200,6 +207,7 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
         ioExecutor.execute(() -> {
             try {
                 ContactId addedContactId = cem.startContactExchange();
+                scheduleContactKeysRotation(addedContactId);
 
                 if (result.isAlice()) {
                     connectionManager.manageOutgoingConnection(conn, transportId, addedContactId);
@@ -211,6 +219,21 @@ public class AddContactViewModel extends ViewModel implements EventListener, QrC
                 Log.w(TAG, "Contact exchange failed", e);
             }
         });
+    }
+
+    private void scheduleContactKeysRotation(ContactId contactId) {
+        Data inputData = new Data.Builder()
+                .putInt(CONTACT_ID_KEY, contactId.getInt())
+                .build();
+
+        WorkRequest scheduledWorkRequest = new PeriodicWorkRequest.Builder(
+                TransportKeyRotationWork.class, 1, TimeUnit.DAYS)
+                .addTag(WORK_TAG)
+                .setInputData(inputData)
+                .setInitialDelay(1, TimeUnit.DAYS)
+                .build();
+
+        WorkManager.getInstance(getApplication()).enqueue(scheduledWorkRequest);
     }
 
     private String encodePayload(Payload payload) throws EncodeException,

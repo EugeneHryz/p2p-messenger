@@ -200,8 +200,7 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 					return connectTo(address, uuid);
 				} catch (IOException e) {
 					if (LOG.isLoggable(INFO)) {
-						LOG.info("Could not connect to "
-								+ scrubMacAddress(address));
+						LOG.info("Could not connect to " + scrubMacAddress(address));
 					}
 				}
 			}

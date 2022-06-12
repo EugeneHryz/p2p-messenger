@@ -11,6 +11,7 @@ import android.os.StrictMode;
 
 import com.eugene.wc.plugin.bluetooth.AndroidBluetoothPluginFactory;
 import com.eugene.wc.plugin.tcp.AndroidLanTcpPluginFactory;
+import com.eugene.wc.protocol.ProtocolComponent;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
 import com.eugene.wc.protocol.api.plugin.BluetoothConstants;
 import com.eugene.wc.protocol.api.plugin.LanTcpConstants;
@@ -45,6 +46,12 @@ public class AppModule {
     @Singleton
     public Application provideApplication() {
         return application;
+    }
+
+    @Provides
+    @Singleton
+    public ProtocolComponent provideProtocolComponent(Application application) {
+        return ((MessengerApplication) application).getApplicationComponent();
     }
 
     @Singleton
