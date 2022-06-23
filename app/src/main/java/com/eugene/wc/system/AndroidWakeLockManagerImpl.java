@@ -19,7 +19,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import javax.inject.Inject;
 
-class AndroidWakeLockManagerImpl implements AndroidWakeLockManager {
+public class AndroidWakeLockManagerImpl implements AndroidWakeLockManager {
 
 	/**
 	 * How often to replace the wake lock.
@@ -35,7 +35,7 @@ class AndroidWakeLockManagerImpl implements AndroidWakeLockManager {
 	private final SharedWakeLock sharedWakeLock;
 
 	@Inject
-	AndroidWakeLockManagerImpl(Application app,
+	public AndroidWakeLockManagerImpl(Application app,
 			ScheduledExecutorService scheduledExecutorService) {
 		PowerManager powerManager = (PowerManager)
 				requireNonNull(app.getSystemService(POWER_SERVICE));

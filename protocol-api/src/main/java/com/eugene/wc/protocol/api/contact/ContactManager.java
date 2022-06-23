@@ -15,17 +15,18 @@ public interface ContactManager {
 
     void registerContactHook(ContactHook hook);
 
-    ContactId createContact(Connection txm, Identity remote, IdentityId localId) throws ContactAlreadyExistsException;
+    ContactId createContact(Connection txm, Identity remote, IdentityId localId)
+            throws DbException, ContactAlreadyExistsException;
 
-    Contact getContact(IdentityId identityId);
+    Contact getContact(IdentityId identityId) throws DbException;
 
-    Contact getContactById(ContactId contactId);
+    Contact getContactById(ContactId contactId) throws DbException;
 
-    List<Contact> getAllContacts();
+    List<Contact> getAllContacts() throws DbException;
 
-    ContactId recogniseContact(Tag tag);
+    ContactId recogniseContact(Tag tag) throws DbException;
 
-    boolean rotateContactKeys(ContactId contactId);
+    void rotateContactKeys(ContactId contactId) throws DbException;
 
     interface ContactHook {
 

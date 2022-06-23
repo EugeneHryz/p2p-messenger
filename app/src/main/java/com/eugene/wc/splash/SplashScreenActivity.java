@@ -32,7 +32,6 @@ public class SplashScreenActivity extends BaseActivity {
         getWindow().setExitTransition(new Fade());
 
         new Handler().postDelayed(() -> {
-
             startNextActivity(StartupActivity.class);
             supportFinishAfterTransition();
         }, 1000);

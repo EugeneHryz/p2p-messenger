@@ -16,8 +16,7 @@ import javax.inject.Inject;
 
 class MessageFactoryImpl implements MessageFactory {
 
-	private static final byte[] FORMAT_VERSION_BYTES =
-			new byte[] { Message.FORMAT_VERSION };
+	private static final byte[] FORMAT_VERSION_BYTES = new byte[] { Message.FORMAT_VERSION };
 
 	private final CryptoComponent crypto;
 

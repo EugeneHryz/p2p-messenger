@@ -7,24 +7,25 @@ import androidx.lifecycle.ViewModelProvider;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.inject.Provider;
 
 public class ViewModelFactory implements ViewModelProvider.Factory {
 
-    private final Map<Class<?>, ViewModel> viewModels;
+    private final Map<Class<?>, Provider<ViewModel>> viewModels;
 
     @Inject
-    public ViewModelFactory(Map<Class<?>, ViewModel> viewModels) {
+    public ViewModelFactory(Map<Class<?>, Provider<ViewModel>> viewModels) {
         this.viewModels = viewModels;
     }
 
     @NonNull
     @Override
     public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
-        ViewModel viewModel = viewModels.get(modelClass);
+        Provider<ViewModel> viewModelProvider = viewModels.get(modelClass);
 
-        if (viewModel == null) {
+        if (viewModelProvider == null) {
             throw new IllegalArgumentException("Unable to find " + modelClass.getName());
         }
-        return (T) viewModel;
+        return (T) viewModelProvider.get();
     }
 }

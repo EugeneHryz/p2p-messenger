@@ -3,6 +3,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:clickable="true"
+    android:focusable="true"
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
@@ -11,8 +13,6 @@
         android:layout_height="wrap_content"
         android:paddingVertical="20dp"
         android:paddingHorizontal="16dp"
-        android:clickable="true"
-        android:focusable="true"
         android:background="?android:attr/selectableItemBackground">
 
         <TextView

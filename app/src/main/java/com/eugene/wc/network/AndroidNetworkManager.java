@@ -51,14 +51,13 @@ import java.util.logging.Logger;
 
 import javax.inject.Inject;
 
-class AndroidNetworkManager implements NetworkManager, Service {
+public class AndroidNetworkManager implements NetworkManager, Service {
 
 	private static final Logger LOG =
 			getLogger(AndroidNetworkManager.class.getName());
 
 	// See android.net.wifi.WifiManager
-	private static final String WIFI_AP_STATE_CHANGED_ACTION =
-			"android.net.wifi.WIFI_AP_STATE_CHANGED";
+	private static final String WIFI_AP_STATE_CHANGED_ACTION = "android.net.wifi.WIFI_AP_STATE_CHANGED";
 
 	private final TaskScheduler scheduler;
 	private final EventBus eventBus;
@@ -72,8 +71,8 @@ class AndroidNetworkManager implements NetworkManager, Service {
 	private volatile BroadcastReceiver networkStateReceiver = null;
 
 	@Inject
-	AndroidNetworkManager(TaskScheduler scheduler, EventBus eventBus,
-						  @EventExecutor Executor eventExecutor, Application app) {
+	public AndroidNetworkManager(TaskScheduler scheduler, EventBus eventBus,
+								 @EventExecutor Executor eventExecutor, Application app) {
 		this.scheduler = scheduler;
 		this.eventBus = eventBus;
 		this.eventExecutor = eventExecutor;

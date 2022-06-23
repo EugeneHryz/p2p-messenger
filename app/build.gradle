@@ -27,8 +27,8 @@ android {
     compileOptions {
         coreLibraryDesugaringEnabled true
 
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 }
 
@@ -47,6 +47,8 @@ dependencies {
 
     implementation "androidx.work:work-runtime:2.6.0"
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:1.1.5'
+
+    implementation "com.vanniktech:emoji-ios:0.6.0"
 
     annotationProcessor "com.google.dagger:dagger-compiler:$dagger_version"
 

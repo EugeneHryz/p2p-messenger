@@ -51,7 +51,6 @@ public class AddContactActivity extends BaseActivity {
                 Log.d(TAG, "User cancelled the request");
             } else {
                 Log.d(TAG, "Everything is ok, we can start");
-
                 showNextFragment(new QrCodeFragment());
             }
         }

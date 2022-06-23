@@ -32,6 +32,7 @@ import javax.inject.Inject;
 public class DatabaseComponentImpl implements DatabaseComponent {
 
     private static final Logger logger = Logger.getLogger(DatabaseComponentImpl.class.getName());
+
     private final JdbcDatabase db;
 
     @Inject
@@ -110,13 +111,12 @@ public class DatabaseComponentImpl implements DatabaseComponent {
     }
 
     @Override
-    public ContactId createContact(Connection txn, Identity remote, IdentityId localId) throws DbException,
-            ContactAlreadyExistsException {
+    public ContactId createContact(Connection txn, Identity remote, IdentityId localId)
+            throws DbException, ContactAlreadyExistsException {
         boolean alreadyExists = db.containsContact(txn, remote.getId(), localId);
         if (!alreadyExists) {
-            ContactId generatedId = db.createContact(txn, remote, localId);
 
-            return generatedId;
+            return  db.createContact(txn, remote, localId);
         } else {
             logger.warning("Contact already exists");
             throw new ContactAlreadyExistsException("Contact already exists");
@@ -130,9 +130,18 @@ public class DatabaseComponentImpl implements DatabaseComponent {
 
     @Override
     public Message getMessage(Connection txn, MessageId m) throws DbException {
-        if (!db.containsMessage(txn, m))
+        if (!db.containsMessage(txn, m)) {
             throw new NoSuchMessageException();
+        }
         return db.getMessage(txn, m);
+    }
+
+    @Override
+    public List<MessageId> getMessageIds(Connection txn, GroupId groupId) throws DbException {
+        if (!db.containsGroup(txn, groupId)) {
+            throw new NoSuchGroupException();
+        }
+        return db.getMessageIds(txn, groupId);
     }
 
     @Override
@@ -170,8 +179,7 @@ public class DatabaseComponentImpl implements DatabaseComponent {
         if (!db.containsGroup(txn, m.getGroupId()))
             throw new NoSuchGroupException();
         if (!db.containsMessage(txn, m.getId())) {
-            db.addMessage(txn, m, DELIVERED, shared, temporary, null);
-
+            db.addMessage(txn, m, DELIVERED, shared, temporary);
         }
         db.mergeMessageMetadata(txn, m.getId(), meta);
     }

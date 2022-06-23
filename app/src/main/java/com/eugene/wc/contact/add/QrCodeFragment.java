@@ -28,13 +28,9 @@ import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.zxing.WriterException;
 import com.eugene.wc.contact.add.AddContactViewModel.State;
 
-import javax.inject.Inject;
-
 public class QrCodeFragment extends BaseFragment {
 
     private static final String TAG = QrCodeFragment.class.getName();
-
-    private CameraView cameraView;
 
     private CircularProgressIndicator progressIndicator;
     private TextView status;
@@ -61,7 +57,7 @@ public class QrCodeFragment extends BaseFragment {
 
         vibrator = (Vibrator) requireActivity().getSystemService(Context.VIBRATOR_SERVICE);
 
-        cameraView = view.findViewById(R.id.camera_view);
+        CameraView cameraView = view.findViewById(R.id.camera_view);
         cameraView.setImageConsumer(qrCodeDecoder);
 
         progressIndicator = view.findViewById(R.id.progress_bar);
@@ -82,7 +78,7 @@ public class QrCodeFragment extends BaseFragment {
             progressIndicator.setVisibility(View.VISIBLE);
             progressIndicator.animate();
 
-        } else if (state == State.WAITING) {
+        } else if (state == State.CONNECTING) {
             vibrate(500);
         }
     }

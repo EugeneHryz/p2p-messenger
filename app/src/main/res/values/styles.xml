@@ -43,4 +43,24 @@
         <item name="cornerFamily">rounded</item>
         <item name="cornerSize">@dimen/fab_corner_radius</item>
     </style>
+
+    <style name="TextMessage">
+        <item name="android:textIsSelectable">true</item>
+        <item name="android:textSize">@dimen/small_text_size</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
+    </style>
+
+    <style name="TextMessage.Time">
+        <item name="android:textIsSelectable">false</item>
+        <item name="android:textSize">@dimen/tiny_text_size</item>
+        <item name="android:textColor">?android:attr/textColorTertiary</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <style name="TextMessage.Date">
+        <item name="android:textIsSelectable">false</item>
+        <item name="android:textSize">@dimen/small_text_size</item>
+        <item name="android:textColor">?android:attr/textColorTertiary</item>
+        <item name="android:maxLines">1</item>
+    </style>
 </resources>

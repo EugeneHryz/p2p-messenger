@@ -17,7 +17,6 @@ import com.eugene.wc.protocol.api.data.WdfDictionary2;
 import com.eugene.wc.protocol.api.data.WdfList2;
 import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.exception.DbException;
-import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.identity.IdentityManager;
@@ -89,14 +88,9 @@ public class ContactExchangeManagerImpl implements ContactExchangeManager {
         try {
             localIdentity = identityManager.getIdentity();
             localProps = tpm.getLocalProperties();
-
         } catch (DbException e) {
             logger.warning("Unable to load local identity data\n" + e);
             throw new ContactExchangeException("Unable to load local identity data", e);
-        }
-        if (localIdentity == null) {
-            logger.warning("Identity is null");
-            throw new ContactExchangeException("Identity is null");
         }
 
         try {
@@ -110,9 +104,7 @@ public class ContactExchangeManagerImpl implements ContactExchangeManager {
             }
 
             try {
-                ContactId contactId = addContact(remoteContactInfo, localIdentity.getId());
-                return contactId;
-
+                return addContact(remoteContactInfo, localIdentity.getId());
             } catch (ContactAlreadyExistsException | DbException e) {
                 throw new ContactExchangeException("Unable to add contact", e);
             }

@@ -75,7 +75,7 @@ public class ConnectionManagerImpl implements ConnectionManager, MessageSession.
     @Override
     public void manageIncomingConnection(DuplexTransportConnection c, TransportId transportId) {
         submitSession(new IncomingMessageSession(this, c, transportId, connectionRegistry,
-                tpm, eventBus, contactManager, conversationManager, contactGroupFactory, component));
+                tpm, eventBus, contactManager, conversationManager, component));
     }
 
     @Override

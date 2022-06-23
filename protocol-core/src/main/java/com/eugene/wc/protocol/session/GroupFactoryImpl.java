@@ -1,29 +1,26 @@
 package com.eugene.wc.protocol.session;
 
 import static com.eugene.wc.protocol.api.session.GroupId.LABEL;
-import static com.eugene.wc.protocol.api.util.ByteUtils.INT_32_BYTES;
 
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.session.ClientId;
 import com.eugene.wc.protocol.api.session.Group;
 import com.eugene.wc.protocol.api.session.GroupFactory;
 import com.eugene.wc.protocol.api.session.GroupId;
-import com.eugene.wc.protocol.api.util.ByteUtils;
 import com.eugene.wc.protocol.api.util.StringUtils;
 
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 
 @Immutable
-class GroupFactoryImpl implements GroupFactory {
+public class GroupFactoryImpl implements GroupFactory {
 
-	private static final byte[] FORMAT_VERSION_BYTES =
-			new byte[] { Group.FORMAT_VERSION };
+	private static final byte[] FORMAT_VERSION_BYTES = new byte[] { Group.FORMAT_VERSION };
 
 	private final CryptoComponent crypto;
 
 	@Inject
-    GroupFactoryImpl(CryptoComponent crypto) {
+    public GroupFactoryImpl(CryptoComponent crypto) {
 		this.crypto = crypto;
 	}
 

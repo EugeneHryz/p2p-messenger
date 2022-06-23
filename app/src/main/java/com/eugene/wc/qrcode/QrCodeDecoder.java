@@ -28,7 +28,7 @@ public class QrCodeDecoder implements ImageConsumer {
     private int sensorOrientation;
     private final AtomicBoolean started = new AtomicBoolean(false);
 
-    private Callback callback;
+    private final Callback callback;
 
     public QrCodeDecoder(Callback callback) {
         this.callback = callback;
@@ -39,12 +39,14 @@ public class QrCodeDecoder implements ImageConsumer {
     public void onImageAvailable(ImageReader reader) {
         if (started.get()) {
             try (Image image = reader.acquireLatestImage()) {
-                ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                if (image != null) {
+                    ByteBuffer buffer = image.getPlanes()[0].getBuffer();
 
-                byte[] data = new byte[buffer.remaining()];
-                buffer.get(data);
+                    byte[] data = new byte[buffer.remaining()];
+                    buffer.get(data);
 
-                decode(data, image.getWidth(), image.getHeight(), sensorOrientation);
+                    decode(data, image.getWidth(), image.getHeight(), sensorOrientation);
+                }
             }
         }
     }

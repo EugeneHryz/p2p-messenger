@@ -3,11 +3,6 @@ package com.eugene.wc.protocol.api.properties;
 public interface TransportPropertyConstants {
 
 	/**
-	 * The maximum number of properties per transport.
-	 */
-	int MAX_PROPERTIES_PER_TRANSPORT = 100;
-
-	/**
 	 * The maximum length of a property's key or value in UTF-8 bytes.
 	 */
 	int MAX_PROPERTY_LENGTH = 100;
@@ -19,25 +14,25 @@ public interface TransportPropertyConstants {
 
 	/**
 	 * Message metadata key for the transport ID of a local or remote update,
-	 * as a BDF string.
+	 * as a WDF string.
 	 */
 	String MSG_KEY_TRANSPORT_ID = "transportId";
 
 	/**
 	 * Message metadata key for the version number of a local or remote update,
-	 * as a BDF long.
+	 * as a WDF long.
 	 */
 	String MSG_KEY_VERSION = "version";
 
 	/**
-	 * Message metadata key for whether an update is local or remote, as a BDF
+	 * Message metadata key for whether an update is local or remote, as a WDF
 	 * boolean.
 	 */
 	String MSG_KEY_LOCAL = "local";
 
 	/**
 	 * Group metadata key for any discovered transport properties of the
-	 * contact, as a BDF dictionary.
+	 * contact, as a WDF dictionary.
 	 */
 	String GROUP_KEY_DISCOVERED = "discovered";
 }

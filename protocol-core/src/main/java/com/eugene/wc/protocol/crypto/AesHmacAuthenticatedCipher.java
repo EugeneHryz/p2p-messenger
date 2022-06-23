@@ -83,7 +83,8 @@ public class AesHmacAuthenticatedCipher implements AuthenticatedCipher {
     }
 
     @Override
-    public byte[] decrypt(final byte[] ciphertext) throws InvalidParameterException, DecryptionException {
+    public byte[] decrypt(final byte[] ciphertext) throws InvalidParameterException,
+            DecryptionException {
         Mac mac;
         try {
             mac = Mac.getInstance(MAC_ALGORITHM);
@@ -97,8 +98,7 @@ public class AesHmacAuthenticatedCipher implements AuthenticatedCipher {
 
         if (ArrayUtil.compare(ciphertext, ciphertext.length - MAC_LENGTH,
                 calculatedAuthTag, 0, MAC_LENGTH) != 0) {
-            throw new DecryptionException("Unable to decrypt because encrypted message " +
-                    "possibly has been changed");
+            throw new DecryptionException("Unable to decrypt: calculated and stored MACs don't match");
         }
 
         byte[] ivBytes = new byte[IV_LENGTH];

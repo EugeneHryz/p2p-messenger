@@ -47,109 +47,80 @@ public class ContactManagerImpl implements ContactManager {
 
     @Override
     public ContactId createContact(Connection txn, Identity remote, IdentityId localId)
-            throws ContactAlreadyExistsException {
-        ContactId id = null;
-        try {
-            id = db.createContact(txn, remote, localId);
-            if (id != null) {
-                Contact contact = db.getContactById(txn, id);
-                for (ContactHook hook : hooks) hook.addingContact(txn, contact);
-            }
-        } catch (DbException e) {
-            logger.warning("Unable to create contact\n" + e);
+            throws DbException, ContactAlreadyExistsException {
+        ContactId id = db.createContact(txn, remote, localId);
+        if (id != null) {
+            Contact contact = db.getContactById(txn, id);
+            for (ContactHook hook : hooks) hook.addingContact(txn, contact);
         }
         return id;
     }
 
     @Override
-    public Contact getContact(IdentityId identityId) {
-        Contact c = null;
-        try {
-            c = db.runInTransactionWithResult(true, (txn) -> db.getContact(txn, identityId));
-        } catch (DbException e) {
-            logger.warning("Unable to get contact by id\n" + e);
-        }
+    public Contact getContact(IdentityId identityId) throws DbException {
+        Contact c = db.runInTransactionWithResult(true,
+                (txn) -> db.getContact(txn, identityId));
         return c;
     }
 
     @Override
-    public Contact getContactById(ContactId contactId) {
-        Contact c = null;
-        try {
-            c = db.runInTransactionWithResult(true, (txn) -> db.getContactById(txn, contactId));
-        } catch (DbException e) {
-            logger.warning("Unable to get contact by id\n" + e);
-        }
+    public Contact getContactById(ContactId contactId) throws DbException {
+        Contact c = db.runInTransactionWithResult(true,
+                (txn) -> db.getContactById(txn, contactId));
         return c;
     }
 
     @Override
-    public List<Contact> getAllContacts() {
-        List<Contact> contacts = null;
-        try {
-            contacts = db.runInTransactionWithResult(true, db::getAllContacts);
-
-        } catch (DbException e) {
-            logger.warning("Unable to get all contacts\n" + e);
-        }
+    public List<Contact> getAllContacts() throws DbException {
+        List<Contact> contacts = db.runInTransactionWithResult(true, db::getAllContacts);
         return contacts;
     }
 
     @Override
-    public ContactId recogniseContact(Tag tag) {
+    public ContactId recogniseContact(Tag tag) throws DbException {
         ContactId contactId = null;
-        try {
-            List<TransportKeys> allKeys = db.runInTransactionWithResult(true, db::getAllTransportKeys);
+        List<TransportKeys> allKeys = db.runInTransactionWithResult(true, db::getAllTransportKeys);
 
-            for (TransportKeys keys : allKeys) {
-                byte[] number = new byte[ByteUtils.INT_64_BYTES];
-                ByteUtils.writeUint64(0, number, 0);
+        for (TransportKeys keys : allKeys) {
+            byte[] number = new byte[ByteUtils.INT_64_BYTES];
+            ByteUtils.writeUint64(0, number, 0);
 
-                SecretKey derivedIncomingKey = crypto.deriveKey(keys.getIncomingKey(), null, number);
-                byte[] tagBytes = Arrays.copyOf(crypto.mac(derivedIncomingKey, null,
-                        number), TAG_LENGTH);
+            SecretKey derivedIncomingKey = crypto.deriveKey(keys.getIncomingKey(), null, number);
+            byte[] tagBytes = Arrays.copyOf(crypto.mac(derivedIncomingKey, null,
+                    number), TAG_LENGTH);
 
-                if (Arrays.equals(tagBytes, tag.getBytes())) {
-                    contactId = keys.getContactId();
-                    break;
-                }
+            if (Arrays.equals(tagBytes, tag.getBytes())) {
+                contactId = keys.getContactId();
+                break;
             }
-        } catch (DbException e) {
-            logger.warning("Unable to get all transport keys\n" + e);
         }
         return contactId;
     }
 
     @Override
-    public boolean rotateContactKeys(ContactId contactId) {
-        boolean rotated = false;
-        try {
-            Contact contact = db.runInTransactionWithResult(true,
-                    (txn) -> db.getContactById(txn, contactId));
+    public void rotateContactKeys(ContactId contactId) throws DbException {
+        Contact contact = db.runInTransactionWithResult(true,
+                (txn) -> db.getContactById(txn, contactId));
 
-            // FIXME: for now we just assume that both device's clocks always have the same date
-            // (including the time when we first added each other as contacts)
-            LocalDate currentDate = LocalDate.now();
-            LocalDate addedContactDate = contact.getAddedDate();
+        // FIXME: for now we just assume that both device's clocks always have the same date
+        // (including the time when we first added each other as contacts)
+        LocalDate currentDate = LocalDate.now();
+        LocalDate addedContactDate = contact.getAddedDate();
 
-            long periodNumber = ChronoUnit.DAYS.between(currentDate, addedContactDate);
-            byte[] number = new byte[ByteUtils.INT_64_BYTES];
-            ByteUtils.writeUint64(periodNumber, number, 0);
+        long periodNumber = ChronoUnit.DAYS.between(currentDate, addedContactDate);
+        byte[] number = new byte[ByteUtils.INT_64_BYTES];
+        ByteUtils.writeUint64(periodNumber, number, 0);
 
-            TransportKeys keys = db.runInTransactionWithResult(true,
-                    (txn) -> db.getContactKeys(txn, contactId));
+        TransportKeys keys = db.runInTransactionWithResult(true,
+                (txn) -> db.getContactKeys(txn, contactId));
 
-            SecretKey rotatedOutKey = crypto.deriveKey(keys.getOutgoingKey(), KEY_ROTATION, number);
-            SecretKey rotatedInKey = crypto.deriveKey(keys.getIncomingKey(), KEY_ROTATION, number);
+        SecretKey rotatedOutKey = crypto.deriveKey(keys.getOutgoingKey(), KEY_ROTATION, number);
+        SecretKey rotatedInKey = crypto.deriveKey(keys.getIncomingKey(), KEY_ROTATION, number);
 
-            TransportKeys rotatedKeys = new TransportKeys(keys.getKeySetId(), contactId,
-                    rotatedOutKey, rotatedInKey);
-            db.runInTransaction(false, (txn) -> db.mergeContactKeys(txn, rotatedKeys));
-            rotated = true;
-            logger.info("Contact keys successfully rotated");
-        } catch (DbException e) {
-            logger.warning("Unable to rotate keys for contactId: " + contactId + "\n" + e);
-        }
-        return rotated;
+        TransportKeys rotatedKeys = new TransportKeys(keys.getKeySetId(), contactId,
+                rotatedOutKey, rotatedInKey);
+        db.runInTransaction(false, (txn) -> db.mergeContactKeys(txn, rotatedKeys));
+
+        logger.info("Contact keys successfully rotated");
     }
 }

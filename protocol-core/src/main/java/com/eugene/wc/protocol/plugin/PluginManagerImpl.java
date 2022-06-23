@@ -1,9 +1,7 @@
 package com.eugene.wc.protocol.plugin;
 
 import static com.eugene.wc.protocol.api.plugin.Plugin.PREF_PLUGIN_ENABLE;
-import static com.eugene.wc.protocol.api.plugin.Plugin.State.ACTIVE;
-import static com.eugene.wc.protocol.api.plugin.Plugin.State.DISABLED;
-import static com.eugene.wc.protocol.api.plugin.Plugin.State.STARTING_STOPPING;
+import static com.eugene.wc.protocol.api.plugin.Plugin.State.*;
 import static com.eugene.wc.protocol.api.util.LogUtils.logDuration;
 import static com.eugene.wc.protocol.api.util.LogUtils.logException;
 import static com.eugene.wc.protocol.api.util.LogUtils.now;
@@ -13,9 +11,7 @@ import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
 
 import com.eugene.wc.protocol.api.connection.ConnectionManager;
-import com.eugene.wc.protocol.api.connection.ConnectionRegistry;
 import com.eugene.wc.protocol.api.contact.ContactId;
-import com.eugene.wc.protocol.api.data.WdfReader;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.io.IoExecutor;
@@ -26,8 +22,6 @@ import com.eugene.wc.protocol.api.plugin.PluginCallback;
 import com.eugene.wc.protocol.api.plugin.PluginConfig;
 import com.eugene.wc.protocol.api.plugin.PluginException;
 import com.eugene.wc.protocol.api.plugin.PluginManager;
-import com.eugene.wc.protocol.api.plugin.TransportConnectionReader;
-import com.eugene.wc.protocol.api.plugin.TransportConnectionWriter;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPlugin;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPluginFactory;
@@ -40,10 +34,7 @@ import com.eugene.wc.protocol.api.properties.TransportPropertyManager;
 import com.eugene.wc.protocol.api.settings.Settings;
 import com.eugene.wc.protocol.api.settings.SettingsManager;
 import com.eugene.wc.protocol.api.system.WakefulIoExecutor;
-import com.eugene.wc.protocol.data.WdfReaderImpl;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -215,8 +206,7 @@ public class PluginManagerImpl implements PluginManager, Service {
 		private final Plugin plugin;
 		private final CountDownLatch startLatch, stopLatch;
 
-		private PluginStopper(Plugin plugin, CountDownLatch startLatch,
-				CountDownLatch stopLatch) {
+		private PluginStopper(Plugin plugin, CountDownLatch startLatch, CountDownLatch stopLatch) {
 			this.plugin = plugin;
 			this.startLatch = startLatch;
 			this.stopLatch = stopLatch;
@@ -310,8 +300,7 @@ public class PluginManagerImpl implements PluginManager, Service {
 			Plugin.State oldState = state.getAndSet(newState);
 			if (newState != oldState) {
 				if (logger.isLoggable(INFO)) {
-					logger.info(id + " changed from state " + oldState
-							+ " to " + newState);
+					logger.info(id + " changed from state " + oldState + " to " + newState);
 				}
 				eventBus.broadcast(new TransportStateEvent(id, newState));
 				if (newState == ACTIVE) {

@@ -9,7 +9,6 @@ import com.eugene.wc.protocol.api.keyexchange.ConnectionChooser;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeResult;
 import com.eugene.wc.protocol.api.keyexchange.KeyExchangeTask;
 import com.eugene.wc.protocol.api.keyexchange.Payload;
-import com.eugene.wc.protocol.api.keyexchange.TransportDescriptor;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeAbortedEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeFinishedEvent;
 import com.eugene.wc.protocol.api.keyexchange.event.KeyExchangeListeningEvent;
@@ -58,7 +57,6 @@ public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask,
             if (transport == null) {
                 throw new AbortException("Unable to establish remote connection");
             }
-
             KeyExchangeProtocol protocol = new KeyExchangeProtocol(this, transport, crypto,
                     kec, localPayload, remotePayload, localKeyPair, isAlice);
             SecretKey sharedSecret = protocol.perform();
@@ -83,18 +81,16 @@ public class KeyExchangeTaskImpl extends Thread implements KeyExchangeTask,
             localKeyPair = ephemeralKeyPair;
             localPayload = connector.listen(localKeyPair);
 
-            logger.info("Received localPayload ");
-            for (TransportDescriptor td : localPayload.getDescriptors()) {
-                logger.info(td.getTransportId().toString());
-            }
             eventBus.broadcast(new KeyExchangeListeningEvent(localPayload));
         }
     }
 
     @Override
     public synchronized void stopListening() {
-        connector.stopListening();
-        eventBus.broadcast(new KeyExchangeStoppedListeningEvent());
+        if (localPayload != null) {
+            connector.stopListening();
+            eventBus.broadcast(new KeyExchangeStoppedListeningEvent());
+        }
     }
 
     @Override

@@ -3,11 +3,9 @@ package com.eugene.wc.protocol.identity;
 import com.eugene.wc.protocol.api.db.DatabaseComponent;
 import com.eugene.wc.protocol.api.db.DatabaseOpenListener;
 import com.eugene.wc.protocol.api.db.exception.DbException;
-import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityFactory;
 import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.identity.LocalIdentity;
-import com.eugene.wc.protocol.api.transport.TransportKeys;
 
 import java.sql.Connection;
 import java.util.logging.Logger;

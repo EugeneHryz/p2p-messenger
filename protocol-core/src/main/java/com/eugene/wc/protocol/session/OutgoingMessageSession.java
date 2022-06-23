@@ -6,38 +6,27 @@ import com.eugene.wc.protocol.ProtocolComponent;
 import com.eugene.wc.protocol.api.client.ContactGroupFactory;
 import com.eugene.wc.protocol.api.connection.ConnectionRegistry;
 import com.eugene.wc.protocol.api.connection.Priority;
-import com.eugene.wc.protocol.api.contact.Contact;
 import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.ContactManager;
-import com.eugene.wc.protocol.api.contact.event.ContactRemovedEvent;
+import com.eugene.wc.protocol.api.conversation.ContactConversation;
 import com.eugene.wc.protocol.api.conversation.ConversationManager;
-import com.eugene.wc.protocol.api.conversation.MessageQueue;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.db.exception.DbException;
-import com.eugene.wc.protocol.api.event.Event;
 import com.eugene.wc.protocol.api.event.EventBus;
-import com.eugene.wc.protocol.api.event.EventListener;
-import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
-import com.eugene.wc.protocol.api.plugin.event.TransportInactiveEvent;
 import com.eugene.wc.protocol.api.properties.TransportProperties;
 import com.eugene.wc.protocol.api.properties.TransportPropertyManager;
 import com.eugene.wc.protocol.api.session.Ack;
 import com.eugene.wc.protocol.api.session.Group;
 import com.eugene.wc.protocol.api.session.Message;
 import com.eugene.wc.protocol.api.session.MessageFactory;
-import com.eugene.wc.protocol.api.session.MessageReader;
-import com.eugene.wc.protocol.api.session.MessageWriter;
-import com.eugene.wc.protocol.api.session.event.CloseSyncConnectionsEvent;
 import com.eugene.wc.protocol.api.transport.KeyManager;
-import com.eugene.wc.protocol.api.util.ArrayUtil;
 import com.eugene.wc.protocol.transport.TransportKeyManager;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.logging.Logger;
 
@@ -59,9 +48,7 @@ public class OutgoingMessageSession extends MessageSession {
     private final ProtocolComponent component;
 
     private final Message introMessage;
-    private final MessageQueue messageQueue;
-
-    private final RandomMessageGenerator messageGenerator;
+    private ContactConversation contactConversation;
 
     public OutgoingMessageSession(Callback callback,
                                   DuplexTransportConnection conn,
@@ -86,19 +73,22 @@ public class OutgoingMessageSession extends MessageSession {
         this.component = component;
         this.transportKeyManager = new TransportKeyManager(contactId, component);
 
-        messageQueue = conversationManager.registerConversation(contactId);
+        try {
+            contact = contactManager.getContactById(contactId);
+        } catch (DbException e) {
+            logger.warning("Unable to get contact by id\n" + e);
+            throw new RuntimeException(e);
+        }
+        contactConversation = conversationManager.getContactConversation(contactId);
+        if (contactConversation == null) {
+            contactConversation = conversationManager.registerConversation(contact);
+        }
 
-        contact = contactManager.getContactById(contactId);
         Group sharedGroup = contactGroupFactory.createContactGroup(ConversationManager.CLIENT_ID, contact);
         long now = System.currentTimeMillis();
         byte[] contentRaw = contact.getLocalIdentityId().getBytes();
 
         introMessage = messageFactory.createMessage(sharedGroup.getId(), now, contentRaw);
-
-        // fixme: to be removed...
-        messageGenerator = new RandomMessageGenerator(sharedGroup, messageQueue, component);
-        messageGenerator.start();
-        //
 
         initReaderAndWriter();
     }
@@ -116,8 +106,8 @@ public class OutgoingMessageSession extends MessageSession {
             return;
         }
 
-        sessionWriter = new SessionWriter(messageWriter, messageQueue);
-        sessionReader = new SessionReader(messageReader, this);
+        sessionWriter = new SessionWriter(messageWriter, contactConversation.getMessageQueue());
+        sessionReader = new SessionReader(messageReader, contactConversation);
 
         if (shouldCloseRedundantSession()) {
             logger.info("We are responsible for closing redundant session");
@@ -141,17 +131,9 @@ public class OutgoingMessageSession extends MessageSession {
             eventBus.removeListener(this);
             connectionRegistry.unregisterConnection(contact.getId(), transportId, connection,
                     false, false);
-            //
-            messageGenerator.setInterrupted(true);
-            //
+
             closeLatch.countDown();
         }
-    }
-
-    @Override
-    public void onMessageReceived(Message message) {
-        String messageBody = new String(message.getBody(), StandardCharsets.UTF_8);
-        logger.info("MESSAGE RECEIVED: " + messageBody);
     }
 
     private boolean introduceItself() throws IOException, CryptoException {

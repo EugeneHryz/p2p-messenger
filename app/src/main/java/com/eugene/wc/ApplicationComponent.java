@@ -6,6 +6,7 @@ import com.eugene.wc.network.AndroidNetworkModule;
 import com.eugene.wc.protocol.ProtocolComponent;
 import com.eugene.wc.protocol.ProtocolCoreModule;
 import com.eugene.wc.protocol.api.account.AccountManager;
+import com.eugene.wc.protocol.api.connection.ConnectionRegistry;
 import com.eugene.wc.protocol.api.contact.ContactManager;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
 import com.eugene.wc.protocol.api.crypto.CryptoExecutor;
@@ -21,6 +22,7 @@ import com.eugene.wc.protocol.api.system.AndroidWakeLockManager;
 import com.eugene.wc.protocol.api.system.Clock;
 import com.eugene.wc.system.AndroidMessengerModule;
 import com.eugene.wc.system.ClockModule;
+import com.eugene.wc.view.EmojiTextInputView;
 import com.eugene.wc.viewmodel.ViewModelModule;
 import com.eugene.wc.work.WorkModule;
 
@@ -72,6 +74,8 @@ public interface ApplicationComponent extends AndroidEagerSingletons, ProtocolCo
     Executor ioExecutor();
 
     AndroidWakeLockManager wakeLockManager();
+
+    ConnectionRegistry connectionRegistry();
 
 
     void inject(MessengerApplicationImpl app);

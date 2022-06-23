@@ -11,7 +11,6 @@ import com.eugene.wc.protocol.api.connection.ConnectionManager;
 import com.eugene.wc.protocol.api.connection.ConnectionRegistry;
 import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.event.ContactAddedEvent;
-import com.eugene.wc.protocol.api.data.WdfWriter;
 import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.event.Event;
 import com.eugene.wc.protocol.api.event.EventListener;
@@ -19,8 +18,6 @@ import com.eugene.wc.protocol.api.io.IoExecutor;
 import com.eugene.wc.protocol.api.plugin.ConnectionHandler;
 import com.eugene.wc.protocol.api.plugin.Plugin;
 import com.eugene.wc.protocol.api.plugin.PluginManager;
-import com.eugene.wc.protocol.api.plugin.TransportConnectionReader;
-import com.eugene.wc.protocol.api.plugin.TransportConnectionWriter;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPlugin;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexTransportConnection;
@@ -34,10 +31,7 @@ import com.eugene.wc.protocol.api.system.Clock;
 import com.eugene.wc.protocol.api.system.TaskScheduler;
 import com.eugene.wc.protocol.api.system.TaskScheduler.Cancellable;
 import com.eugene.wc.protocol.api.system.WakefulIoExecutor;
-import com.eugene.wc.protocol.data.WdfWriterImpl;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,7 +49,7 @@ import javax.inject.Inject;
 @ThreadSafe
 public class PollerImpl implements Poller, EventListener {
 
-	private static final Logger LOG = getLogger(PollerImpl.class.getName());
+	private static final Logger logger = getLogger(PollerImpl.class.getName());
 
 	private final Executor ioExecutor, wakefulIoExecutor;
 	private final TaskScheduler scheduler;
@@ -66,18 +60,20 @@ public class PollerImpl implements Poller, EventListener {
 	private final SecureRandom random;
 	private final Clock clock;
 	private final Lock lock;
+
 	@GuardedBy("lock")
 	private final Map<TransportId, ScheduledPollTask> tasks;
 
 	@Inject
-	PollerImpl(@IoExecutor Executor ioExecutor,
-			   @WakefulIoExecutor Executor wakefulIoExecutor,
-			   TaskScheduler scheduler,
-			   ConnectionRegistry connectionRegistry,
-			   PluginManager pluginManager,
-			   TransportPropertyManager transportPropertyManager,
-			   Clock clock,
-			   ConnectionManager connectionManager) {
+	public PollerImpl(@IoExecutor Executor ioExecutor,
+					  @WakefulIoExecutor Executor wakefulIoExecutor,
+					  TaskScheduler scheduler,
+					  ConnectionRegistry connectionRegistry,
+					  PluginManager pluginManager,
+					  TransportPropertyManager transportPropertyManager,
+					  Clock clock,
+					  ConnectionManager connectionManager) {
+
 		this.ioExecutor = ioExecutor;
 		this.wakefulIoExecutor = wakefulIoExecutor;
 		this.scheduler = scheduler;
@@ -121,8 +117,11 @@ public class PollerImpl implements Poller, EventListener {
 	}
 
 	private void connectToContact(ContactId c) {
-		for (DuplexPlugin d : pluginManager.getDuplexPlugins())
-			if (d.shouldPoll()) connectToContact(c, d);
+		for (DuplexPlugin d : pluginManager.getDuplexPlugins()) {
+			if (d.shouldPoll()) {
+				connectToContact(c, d);
+			}
+		}
 	}
 
 	private void connectToContact(ContactId c, TransportId t) {
@@ -136,14 +135,14 @@ public class PollerImpl implements Poller, EventListener {
 			TransportId t = p.getId();
 			if (connectionRegistry.isConnected(c, t)) return;
 			try {
-				TransportProperties props =
-						transportPropertyManager.getRemoteProperties(c, t);
+				TransportProperties props = transportPropertyManager.getRemoteProperties(c, t);
 				DuplexTransportConnection d = p.createConnection(props);
-				// fixme: removed
-//				if (d != null)
-//					connectionManager.manageOutgoingConnection(c, t, d);
+
+				if (d != null) {
+					connectionManager.manageOutgoingConnection(d, t, c);
+				}
 			} catch (DbException e) {
-				logException(LOG, WARNING, e);
+				logException(logger, WARNING, e);
 			}
 		});
 	}
@@ -194,22 +193,21 @@ public class PollerImpl implements Poller, EventListener {
 	@IoExecutor
 	private void poll(Plugin p) {
 		TransportId t = p.getId();
-		if (LOG.isLoggable(INFO)) LOG.info("Polling plugin " + t);
+		if (logger.isLoggable(INFO)) logger.info("Polling plugin " + t);
 		try {
-			Map<ContactId, TransportProperties> remote =
-					transportPropertyManager.getRemoteProperties(t);
-			Collection<ContactId> connected =
-					connectionRegistry.getConnectedOrBetterContacts(t);
-			Collection<Pair<TransportProperties, ConnectionHandler>>
-					properties = new ArrayList<>();
+			Map<ContactId, TransportProperties> remote = transportPropertyManager.getRemoteProperties(t);
+			Collection<ContactId> connected = connectionRegistry.getConnectedOrBetterContacts(t);
+			Collection<Pair<TransportProperties, ConnectionHandler>> properties = new ArrayList<>();
+
 			for (Map.Entry<ContactId, TransportProperties> e : remote.entrySet()) {
 				ContactId c = e.getKey();
-				if (!connected.contains(c))
+				if (!connected.contains(c)) {
 					properties.add(new Pair<>(e.getValue(), new Handler(c, t)));
+				}
 			}
 			if (!properties.isEmpty()) p.poll(properties);
 		} catch (DbException e) {
-			logException(LOG, WARNING, e);
+			logException(logger, WARNING, e);
 		}
 	}
 

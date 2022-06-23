@@ -3,13 +3,13 @@ package com.eugene.wc.contact;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
@@ -17,8 +17,13 @@ import com.eugene.wc.R;
 import com.eugene.wc.activity.ActivityComponent;
 import com.eugene.wc.activity.RequestCode;
 import com.eugene.wc.contact.add.AddContactActivity;
+import com.eugene.wc.conversation.ConversationActivity;
+import com.eugene.wc.fragment.AlertDialogFragment;
 import com.eugene.wc.fragment.BaseFragment;
+import com.eugene.wc.fragment.DialogResultListener;
 import com.eugene.wc.protocol.api.Predicate;
+import com.eugene.wc.protocol.api.connection.ConnectionRegistry;
+import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.view.MessengerRecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -26,10 +31,13 @@ import java.util.List;
 
 import javax.inject.Inject;
 
-public class ContactListFragment extends BaseFragment {
+public class ContactListFragment extends BaseFragment implements ContactListAdapter.Callback,
+        DialogResultListener {
 
     private static final String TAG = ContactListFragment.class.getName();
 
+    @Inject
+    ConnectionRegistry connectionRegistry;
     @Inject
     ViewModelProvider.Factory viewModelFactory;
     private ContactListViewModel viewModel;
@@ -77,6 +85,21 @@ public class ContactListFragment extends BaseFragment {
     }
 
     @Override
+    public void onContactItemClicked(ContactId contactId) {
+        if (connectionRegistry.isConnected(contactId)) {
+            Intent intent = new Intent(requireActivity(), ConversationActivity.class);
+            intent.putExtra(ConversationActivity.CONTACT_ID_KEY, contactId.getInt());
+            startActivity(intent);
+        } else {
+            showAlertDialog();
+        }
+    }
+
+    @Override
+    public void onDialogDismissed() {
+    }
+
+    @Override
     public String getUniqueTag() {
         return TAG;
     }
@@ -86,9 +109,19 @@ public class ContactListFragment extends BaseFragment {
         contactList.setNoItemsDescription(R.string.no_contacts_description);
 
         contactList.setLayoutManager(new LinearLayoutManager(requireContext()));
-        adapter = new ContactListAdapter();
+        adapter = new ContactListAdapter(this);
 
         contactList.setAdapter(adapter);
+    }
+
+    private void showAlertDialog() {
+        DialogFragment dialogFragment = new AlertDialogFragment(this);
+        Bundle args = new Bundle();
+        args.putInt(AlertDialogFragment.DIALOG_MESSAGE_KEY, R.string.dialog_contact_offline_msg);
+        args.putInt(AlertDialogFragment.DIALOG_TITLE_KEY, R.string.dialog_title_notice);
+        dialogFragment.setArguments(args);
+
+        dialogFragment.show(getChildFragmentManager(), null);
     }
 
     private void updateContactItems(Predicate<ContactItem> shouldUpdate) {

@@ -2,13 +2,11 @@ package com.eugene.wc.protocol.account;
 
 import com.eugene.wc.protocol.api.account.AccountManager;
 import com.eugene.wc.protocol.api.crypto.CryptoComponent;
-import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.DecryptionException;
 import com.eugene.wc.protocol.api.crypto.exception.EncryptionException;
 import com.eugene.wc.protocol.api.db.DatabaseConfig;
-import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityManager;
 import com.eugene.wc.protocol.api.util.StringUtils;
 

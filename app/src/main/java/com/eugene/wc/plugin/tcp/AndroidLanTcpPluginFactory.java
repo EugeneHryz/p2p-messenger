@@ -7,12 +7,12 @@ import android.app.Application;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.io.IoExecutor;
 import com.eugene.wc.protocol.api.plugin.Backoff;
-import com.eugene.wc.protocol.api.plugin.BackoffFactory;
 import com.eugene.wc.protocol.api.plugin.PluginCallback;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPlugin;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPluginFactory;
 import com.eugene.wc.protocol.api.system.WakefulIoExecutor;
+import com.eugene.wc.protocol.plugin.BackoffImpl;
 
 import java.util.concurrent.Executor;
 
@@ -29,19 +29,16 @@ public class AndroidLanTcpPluginFactory implements DuplexPluginFactory {
 
 	private final Executor ioExecutor, wakefulIoExecutor;
 	private final EventBus eventBus;
-	private final BackoffFactory backoffFactory;
 	private final Application app;
 
 	@Inject
 	public AndroidLanTcpPluginFactory(@IoExecutor Executor ioExecutor,
-			@WakefulIoExecutor Executor wakefulIoExecutor,
-			EventBus eventBus,
-			BackoffFactory backoffFactory,
-			Application app) {
+									  @WakefulIoExecutor Executor wakefulIoExecutor,
+									  EventBus eventBus,
+									  Application app) {
 		this.ioExecutor = ioExecutor;
 		this.wakefulIoExecutor = wakefulIoExecutor;
 		this.eventBus = eventBus;
-		this.backoffFactory = backoffFactory;
 		this.app = app;
 	}
 
@@ -57,8 +54,7 @@ public class AndroidLanTcpPluginFactory implements DuplexPluginFactory {
 
 	@Override
 	public DuplexPlugin createPlugin(PluginCallback callback) {
-		Backoff backoff = backoffFactory.createBackoff(MIN_POLLING_INTERVAL,
-				MAX_POLLING_INTERVAL, BACKOFF_BASE);
+		Backoff backoff = new BackoffImpl(MIN_POLLING_INTERVAL, MAX_POLLING_INTERVAL, BACKOFF_BASE);
 		AndroidLanTcpPlugin plugin = new AndroidLanTcpPlugin(ioExecutor,
 				wakefulIoExecutor, app, backoff, callback,
 				MAX_LATENCY, MAX_IDLE_TIME, CONNECTION_TIMEOUT);

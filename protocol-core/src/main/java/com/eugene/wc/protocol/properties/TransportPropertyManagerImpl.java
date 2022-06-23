@@ -8,7 +8,6 @@ import com.eugene.wc.protocol.api.client.ContactGroupFactory;
 import com.eugene.wc.protocol.api.contact.Contact;
 import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.ContactManager;
-import com.eugene.wc.protocol.api.data.MetadataParser;
 import com.eugene.wc.protocol.api.data.WdfDictionary2;
 import com.eugene.wc.protocol.api.data.WdfList2;
 import com.eugene.wc.protocol.api.data.exception.FormatException;
@@ -23,10 +22,10 @@ import com.eugene.wc.protocol.api.session.GroupId;
 import com.eugene.wc.protocol.api.session.Message;
 import com.eugene.wc.protocol.api.session.MessageId;
 import com.eugene.wc.protocol.api.system.Clock;
+import com.eugene.wc.protocol.api.util.StringUtils;
 
 import java.sql.Connection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
@@ -43,7 +42,6 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 
 	private final DatabaseComponent db;
 	private final ClientHelper clientHelper;
-	private final MetadataParser metadataParser;
 	private final ContactGroupFactory contactGroupFactory;
 	private final Clock clock;
 	private final Group localGroup;
@@ -51,11 +49,9 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	@Inject
 	public TransportPropertyManagerImpl(DatabaseComponent db,
 			ClientHelper clientHelper,
-			MetadataParser metadataParser,
 			ContactGroupFactory contactGroupFactory, Clock clock) {
 		this.db = db;
 		this.clientHelper = clientHelper;
-		this.metadataParser = metadataParser;
 		this.contactGroupFactory = contactGroupFactory;
 		this.clock = clock;
 
@@ -65,28 +61,23 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	@Override
 	public void onDatabaseOpened(Connection txn) {
 		try {
-			db.containsGroup(txn, localGroup.getId());
-
+			if (db.containsGroup(txn, localGroup.getId())) return;
 			db.addGroup(txn, localGroup);
-			// Set things up for any pre-existing contacts
+
 			for (Contact c : db.getAllContacts(txn)) addingContact(txn, c);
 		} catch (DbException e) {
-			logger.warning(e.toString());
+			logger.warning("Exception when calling onDatabaseOpened\n" + e);
 		}
 	}
 
 	@Override
 	public void addingContact(Connection txn, Contact c) throws DbException {
-		// Create a group to share with the contact
-		logger.info("Creating group for a contact");
 		Group g = getContactGroup(c);
-		logger.info("adding group to a db a contact");
 		db.addGroup(txn, g);
 
 		Map<TransportId, TransportProperties> local = getLocalProperties(txn);
 		for (Entry<TransportId, TransportProperties> e : local.entrySet()) {
-			storeMessage(txn, g.getId(), e.getKey(), e.getValue(), 1,
-					true, true);
+			storeMessage(txn, g.getId(), e.getKey(), e.getValue(), 1, true, true);
 		}
 	}
 
@@ -101,14 +92,13 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 
 		Group g = getContactGroup(db.getContactById(txn, c));
 		for (Entry<TransportId, TransportProperties> e : props.entrySet()) {
-			storeMessage(txn, g.getId(), e.getKey(), e.getValue(), 0,
-					false, false);
+			storeMessage(txn, g.getId(), e.getKey(), e.getValue(), 0, false, false);
 		}
 	}
 
 	@Override
-	public void addRemotePropertiesFromConnection(ContactId c, TransportId t,
-			TransportProperties props) throws DbException {
+	public void addRemotePropertiesFromConnection(ContactId c, TransportId t, TransportProperties props)
+			throws DbException {
 		if (props.isEmpty()) return;
 		try {
 			db.runInTransaction(false, txn -> {
@@ -138,8 +128,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	}
 
 	@Override
-	public Map<TransportId, TransportProperties> getLocalProperties()
-			throws DbException {
+	public Map<TransportId, TransportProperties> getLocalProperties() throws DbException {
 		return db.runInTransactionWithResult(true, this::getLocalProperties);
 	}
 
@@ -171,8 +160,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 						true);
 				if (latest != null) {
 					// Retrieve and parse the latest local properties
-					WdfList2 message = clientHelper.getMessageAsList(txn,
-							latest.messageId);
+					WdfList2 message = clientHelper.getMessageAsList(txn, latest.messageId);
 					p = parseProperties(message);
 				}
 				return p == null ? new TransportProperties() : p;
@@ -183,8 +171,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	}
 
 	@Override
-	public Map<ContactId, TransportProperties> getRemoteProperties(
-			TransportId t) throws DbException {
+	public Map<ContactId, TransportProperties> getRemoteProperties(TransportId t) throws DbException {
 		return db.runInTransactionWithResult(true, txn -> {
 			Map<ContactId, TransportProperties> remote = new HashMap<>();
 			for (Contact c : db.getAllContacts(txn))
@@ -193,8 +180,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 		});
 	}
 
-	private void updateLocalProperties(Connection txn, Contact c,
-			TransportId t) throws DbException {
+	private void updateLocalProperties(Connection txn, Contact c, TransportId t) throws DbException {
 		try {
 			TransportProperties local;
 			LatestUpdate latest = findLatest(txn, localGroup.getId(), t, true);
@@ -222,8 +208,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 				remote = new TransportProperties();
 			} else {
 				// Retrieve and parse the latest remote properties
-				WdfList2 message =
-						clientHelper.getMessageAsList(txn, latest.messageId);
+				WdfList2 message = clientHelper.getMessageAsList(txn, latest.messageId);
 				remote = parseProperties(message);
 			}
 			// Merge in any discovered properties
@@ -247,27 +232,22 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	}
 
 	@Override
-	public void mergeLocalProperties(TransportId t, TransportProperties p)
-			throws DbException {
+	public void mergeLocalProperties(TransportId t, TransportProperties p) throws DbException {
 		try {
 			db.runInTransaction(false, txn -> {
 				// Merge the new properties with any existing properties
 				TransportProperties merged;
 				boolean changed;
-				LatestUpdate latest = findLatest(txn, localGroup.getId(), t,
-						true);
+				LatestUpdate latest = findLatest(txn, localGroup.getId(), t, true);
 				if (latest == null) {
 					merged = new TransportProperties(p);
-					Iterator<String> it = merged.values().iterator();
-					while (it.hasNext()) {
-						if (isNullOrEmpty(it.next())) it.remove();
-					}
+					merged.values().removeIf(StringUtils::isNullOrEmpty);
 					changed = true;
 				} else {
-					WdfList2 message = clientHelper.getMessageAsList(txn,
-							latest.messageId);
+					WdfList2 message = clientHelper.getMessageAsList(txn, latest.messageId);
 					TransportProperties old = parseProperties(message);
 					merged = new TransportProperties(old);
+
 					for (Entry<String, String> e : p.entrySet()) {
 						String key = e.getKey(), value = e.getValue();
 						if (isNullOrEmpty(value)) merged.remove(key);
@@ -278,10 +258,10 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 				if (changed) {
 					// Store the merged properties in the local group
 					long version = latest == null ? 1 : latest.version + 1;
-					storeMessage(txn, localGroup.getId(), t, merged, version,
-							true, false);
+					storeMessage(txn, localGroup.getId(), t, merged, version, true, false);
 					// Delete the previous update, if any
 					if (latest != null) db.removeMessage(txn, latest.messageId);
+
 					// Store the merged properties in each contact's group
 					for (Contact c : db.getAllContacts(txn)) {
 						storeLocalProperties(txn, c, t, merged);
@@ -293,17 +273,14 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 		}
 	}
 
-	private void storeLocalProperties(Connection txn, Contact c,
-			TransportId t, TransportProperties p)
+	private void storeLocalProperties(Connection txn, Contact c, TransportId t, TransportProperties p)
 			throws DbException, FormatException {
 		Group g = getContactGroup(c);
 		LatestUpdate latest = findLatest(txn, g.getId(), t, true);
 		long version = latest == null ? 1 : latest.version + 1;
 		// Reflect any remote properties we've discovered
-		WdfDictionary2 meta = clientHelper.getGroupMetadataAsDictionary(txn,
-				g.getId());
-		WdfDictionary2 discovered =
-				meta.getOptionalDictionary(GROUP_KEY_DISCOVERED);
+		WdfDictionary2 meta = clientHelper.getGroupMetadataAsDictionary(txn, g.getId());
+		WdfDictionary2 discovered = meta.getOptionalDictionary(GROUP_KEY_DISCOVERED);
 		TransportProperties combined;
 		if (discovered == null) {
 			combined = p;
@@ -328,7 +305,7 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 			TransportProperties p, long version, boolean local, boolean shared)
 			throws DbException {
 		try {
-			WdfList2 body = encodeProperties(t, p, version);
+			WdfList2 body = WdfList2.of(t.toString(), version, p);
 			long now = clock.currentTimeMillis();
 			Message m = clientHelper.createMessage(g, now, body);
 			WdfDictionary2 meta = new WdfDictionary2();
@@ -341,16 +318,11 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 		}
 	}
 
-	private WdfList2 encodeProperties(TransportId t, TransportProperties p,
-			long version) {
-		return WdfList2.of(t.toString(), version, p);
-	}
-
-	private Map<TransportId, LatestUpdate> findLatestLocal(Connection txn)
-			throws DbException, FormatException {
+	private Map<TransportId, LatestUpdate> findLatestLocal(Connection txn) throws DbException, FormatException {
 		Map<TransportId, LatestUpdate> latestUpdates = new HashMap<>();
-		Map<MessageId, WdfDictionary2> metadata = clientHelper
-				.getMessageMetadataAsDictionary(txn, localGroup.getId());
+		Map<MessageId, WdfDictionary2> metadata = clientHelper.getMessageMetadataAsDictionary(
+				txn, localGroup.getId());
+
 		for (Entry<MessageId, WdfDictionary2> e : metadata.entrySet()) {
 			WdfDictionary2 meta = e.getValue();
 			TransportId t = new TransportId(meta.getString(MSG_KEY_TRANSPORT_ID));
@@ -361,16 +333,16 @@ public class TransportPropertyManagerImpl implements TransportPropertyManager, D
 	}
 
 	@Nullable
-	private LatestUpdate findLatest(Connection txn, GroupId g, TransportId t,
-									boolean local) throws DbException, FormatException {
-		Map<MessageId, WdfDictionary2> metadata =
-				clientHelper.getMessageMetadataAsDictionary(txn, g);
+	private LatestUpdate findLatest(Connection txn, GroupId g, TransportId t, boolean local)
+			throws DbException, FormatException {
+
+		Map<MessageId, WdfDictionary2> metadata = clientHelper.getMessageMetadataAsDictionary(txn, g);
 		for (Entry<MessageId, WdfDictionary2> e : metadata.entrySet()) {
 			WdfDictionary2 meta = e.getValue();
 			if (meta.getString(MSG_KEY_TRANSPORT_ID).equals(t.toString())
 					&& meta.getBoolean(MSG_KEY_LOCAL) == local) {
-				return new LatestUpdate(e.getKey(),
-						meta.getLong(MSG_KEY_VERSION));
+
+				return new LatestUpdate(e.getKey(), meta.getLong(MSG_KEY_VERSION));
 			}
 		}
 		return null;

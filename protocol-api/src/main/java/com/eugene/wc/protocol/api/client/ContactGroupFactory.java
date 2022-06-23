@@ -6,11 +6,7 @@ import com.eugene.wc.protocol.api.session.Group;
 
 public interface ContactGroupFactory {
 
-	/**
-	 * Creates a group that is not shared with any contacts.
-	 */
 	Group createLocalGroup(ClientId clientId);
 
 	Group createContactGroup(ClientId clientId, Contact contact);
-
 }

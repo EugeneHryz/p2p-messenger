@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
 
-class AndroidExecutorImpl implements AndroidExecutor {
+public class AndroidExecutorImpl implements AndroidExecutor {
 
 	private final Handler uiHandler;
 	private final Runnable loop;
@@ -25,7 +25,7 @@ class AndroidExecutorImpl implements AndroidExecutor {
 	private volatile Handler backgroundHandler = null;
 
 	@Inject
-	AndroidExecutorImpl(Application app) {
+	public AndroidExecutorImpl(Application app) {
 		uiHandler = new Handler(app.getApplicationContext().getMainLooper());
 		loop = () -> {
 			Looper.prepare();

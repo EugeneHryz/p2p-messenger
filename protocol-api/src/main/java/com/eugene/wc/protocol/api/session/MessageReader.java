@@ -17,4 +17,6 @@ public interface MessageReader {
     Message readNextMessage() throws IOException, DecryptionException;
 
     Ack readNextAck() throws IOException, DecryptionException;
+
+    void close() throws IOException;
 }

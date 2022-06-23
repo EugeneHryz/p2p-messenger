@@ -2,6 +2,7 @@ package com.eugene.wc.protocol.session;
 
 import com.eugene.wc.protocol.api.crypto.exception.DecryptionException;
 import com.eugene.wc.protocol.api.session.Message;
+import com.eugene.wc.protocol.api.session.MessageListener;
 import com.eugene.wc.protocol.api.session.MessageReader;
 
 import java.io.IOException;
@@ -14,9 +15,9 @@ public class SessionReader extends Thread {
 
     private volatile boolean interrupted;
 
-    private final SessionReaderCallback callback;
+    private final MessageListener callback;
 
-    public SessionReader(MessageReader reader, SessionReaderCallback callback) {
+    public SessionReader(MessageReader reader, MessageListener callback) {
         this.reader = reader;
         this.callback = callback;
     }

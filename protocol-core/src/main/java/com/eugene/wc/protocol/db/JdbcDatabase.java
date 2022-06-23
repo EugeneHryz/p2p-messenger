@@ -17,6 +17,7 @@ import com.eugene.wc.protocol.api.session.validation.MessageState;
 import com.eugene.wc.protocol.api.transport.TransportKeys;
 
 import java.sql.Connection;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -34,10 +35,6 @@ public interface JdbcDatabase {
 
     void abortTransaction(Connection txn);
 
-    Settings getSettings(Connection txn, String namespace) throws DbException;
-
-    void mergeSettings(Connection txn, Settings settings, String namespace) throws DbException;
-
     boolean createLocalIdentity(Connection txn, LocalIdentity identity) throws DbException;
 
     List<LocalIdentity> getAllLocalIdentities(Connection txn) throws DbException;
@@ -52,6 +49,8 @@ public interface JdbcDatabase {
     boolean containsMessage(Connection txn, MessageId m) throws DbException;
 
     Message getMessage(Connection txn, MessageId m) throws DbException;
+
+    List<MessageId> getMessageIds(Connection txn, GroupId g) throws DbException;
 
     boolean containsGroup(Connection txn, GroupId g) throws DbException;
 
@@ -74,7 +73,7 @@ public interface JdbcDatabase {
     Metadata getGroupMetadata(Connection txn, GroupId g) throws DbException;
 
     void addMessage(Connection txn, Message m, MessageState state, boolean shared,
-                    boolean temporary, @Nullable ContactId sender) throws DbException;
+                    boolean temporary) throws DbException;
 
     void removeMessage(Connection txn, MessageId m) throws DbException;
 

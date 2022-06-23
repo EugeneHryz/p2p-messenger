@@ -11,4 +11,6 @@ public interface MessageWriter {
     void sendAck(Ack ack) throws IOException, CryptoException;
 
     void sendEndOfSession() throws IOException, CryptoException;
+
+    void close() throws IOException;
 }

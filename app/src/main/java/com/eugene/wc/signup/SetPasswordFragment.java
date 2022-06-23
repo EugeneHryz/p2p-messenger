@@ -17,7 +17,6 @@ import com.eugene.wc.signup.SignUpViewModel.State;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
-
 public class SetPasswordFragment extends BaseSignUpFragment implements TextWatcher {
 
     private static final String TAG = SetPasswordFragment.class.getName();

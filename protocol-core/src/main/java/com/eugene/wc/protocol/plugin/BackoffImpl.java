@@ -6,13 +6,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.concurrent.ThreadSafe;
 
 @ThreadSafe
-class BackoffImpl implements Backoff {
+public class BackoffImpl implements Backoff {
 
 	private final int minInterval, maxInterval;
 	private final double base;
 	private final AtomicInteger backoff;
 
-	BackoffImpl(int minInterval, int maxInterval, double base) {
+	public BackoffImpl(int minInterval, int maxInterval, double base) {
 		this.minInterval = minInterval;
 		this.maxInterval = maxInterval;
 		this.base = base;

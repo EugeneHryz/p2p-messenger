@@ -9,9 +9,7 @@ import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
 import com.eugene.wc.protocol.api.lifecycle.Service;
 import com.eugene.wc.protocol.api.lifecycle.event.LifecycleStateEvent;
 import com.eugene.wc.protocol.api.lifecycle.exception.ServiceException;
-import com.eugene.wc.protocol.db.JdbcDatabase;
 
-import java.sql.Connection;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;

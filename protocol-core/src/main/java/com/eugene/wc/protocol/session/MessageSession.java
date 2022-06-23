@@ -16,7 +16,7 @@ import com.eugene.wc.protocol.api.util.ArrayUtil;
 
 import java.util.concurrent.CountDownLatch;
 
-public abstract class MessageSession implements Runnable, EventListener, SessionReaderCallback {
+public abstract class MessageSession implements Runnable, EventListener {
 
     public interface Callback {
 

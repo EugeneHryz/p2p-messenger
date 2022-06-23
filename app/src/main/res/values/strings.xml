@@ -35,4 +35,16 @@
     <string name="add_contact_intro_message">In order to communicate with someone you both need to add each other to your contact lists.\nTo do this you need to meet in person with your peer and scan each other\'s qr codes.\n\nPlease, provide all necessary permissions</string>
 
     <string name="no_contacts_description">You haven\'t added any contacts yet</string>
+    <string name="no_messages_description">You have no messages to show</string>
+
+    <string name="new_message_hint">Enter new message</string>
+    <string name="options_menu_item">Options</string>
+
+    <string name="dialog_title_notice">Notice</string>
+    <string name="dialog_title_alert">Alert</string>
+    <string name="dialog_generic_error_msg">Error occurred</string>
+    <string name="dialog_contact_disconnected_msg">Contact disconnected. You need to reconnect to continue messaging</string>
+    <string name="dialog_contact_offline_msg">First you need to establish a connection with a contact</string>
+    <string name="dialog_ok_button">OK</string>
+
 </resources>

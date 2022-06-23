@@ -4,6 +4,8 @@ import static com.eugene.wc.protocol.api.session.Metadata.REMOVE;
 import static com.eugene.wc.protocol.api.session.SyncConstants.MESSAGE_HEADER_LENGTH;
 import static com.eugene.wc.protocol.api.session.validation.MessageState.DELIVERED;
 
+import static java.util.logging.Level.WARNING;
+
 import com.eugene.wc.protocol.api.contact.Contact;
 import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.crypto.PrivateKey;
@@ -14,7 +16,6 @@ import com.eugene.wc.protocol.api.db.exception.MessageDeletedException;
 import com.eugene.wc.protocol.api.identity.Identity;
 import com.eugene.wc.protocol.api.identity.IdentityId;
 import com.eugene.wc.protocol.api.identity.LocalIdentity;
-import com.eugene.wc.protocol.api.settings.Settings;
 import com.eugene.wc.protocol.api.session.Group;
 import com.eugene.wc.protocol.api.session.GroupId;
 import com.eugene.wc.protocol.api.session.Message;
@@ -31,7 +32,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,8 +43,6 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
-
-import javax.annotation.Nullable;
 
 public abstract class AbstractJdbcDatabase implements JdbcDatabase {
 
@@ -307,15 +305,6 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
     }
 
     @Override
-    public Settings getSettings(Connection txn, String namespace) throws DbException {
-        return null;
-    }
-
-    @Override
-    public void mergeSettings(Connection txn, Settings settings, String namespace) throws DbException {
-    }
-
-    @Override
     public boolean createLocalIdentity(Connection txn, LocalIdentity local) throws DbException {
         String sql = "INSERT INTO identities" +
                 " (id, name, public_key, private_key)" +
@@ -350,7 +339,6 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
 
                 localIdentities.add(new LocalIdentity(id, pubKey, name, prKey));
             }
-
             return localIdentities;
         } catch (SQLException e) {
             logger.warning("Unable to get all local identities\n" + e);
@@ -458,7 +446,6 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             prStatement.setBytes(1, m.getBytes());
 
             ResultSet rs = prStatement.executeQuery();
-
             if (rs.next()) {
                 GroupId groupId = new GroupId(rs.getBytes(1));
                 long timestamp = rs.getLong(2);
@@ -479,8 +466,26 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
     }
 
     @Override
+    public List<MessageId> getMessageIds(Connection txn, GroupId g) throws DbException {
+        String sql = "SELECT id FROM messages"
+                + " WHERE group_id = ? AND state = ?";
+
+        try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
+            prStatement.setBytes(1, g.getBytes());
+            prStatement.setInt(2, DELIVERED.getValue());
+            ResultSet rs = prStatement.executeQuery();
+            List<MessageId> ids = new ArrayList<>();
+            while (rs.next()) ids.add(new MessageId(rs.getBytes(1)));
+            return ids;
+        } catch (SQLException e) {
+            logger.warning("Unable to get all message ids from one group\n" + e);
+            throw new DbException("Unable to get all message ids from one group", e);
+        }
+    }
+
+    @Override
     public void addMessage(Connection txn, Message m, MessageState state, boolean shared,
-                           boolean temporary, @Nullable ContactId sender) throws DbException {
+                           boolean temporary) throws DbException {
         String sql = "INSERT INTO messages (id, group_id, timestamp,"
                 + " state, shared, temporary, length, raw)"
                 + " VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -506,17 +511,15 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
     }
 
     @Override
-    public void mergeMessageMetadata(Connection txn, MessageId m,
-                                     Metadata meta) throws DbException {
+    public void mergeMessageMetadata(Connection txn, MessageId m, Metadata meta) throws DbException {
         PreparedStatement ps;
         ResultSet rs;
         try {
-            Map<String, byte[]> added = removeOrUpdateMetadata(txn,
-                    m.getBytes(), meta, "message_metadata", "message_id");
+            Map<String, byte[]> added = removeOrUpdateMetadata(txn, m.getBytes(), meta,
+                    "message_metadata", "message_id");
             if (added.isEmpty()) return;
 
-            String sql = "SELECT group_id, state FROM messages"
-                    + " WHERE id = ?";
+            String sql = "SELECT group_id, state FROM messages WHERE id = ?";
             ps = txn.prepareStatement(sql);
             ps.setBytes(1, m.getBytes());
             rs = ps.executeQuery();
@@ -689,7 +692,6 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
                 + " WHERE group_id = ? AND state = ?";
 
         try (PreparedStatement prStatement = txn.prepareStatement(sql)) {
-
             prStatement.setBytes(1, g.getBytes());
             prStatement.setInt(2, DELIVERED.getValue());
 
@@ -706,8 +708,8 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             }
             return all;
         } catch (SQLException e) {
-            logger.warning("Unable to get message metadata from given group " + g + "\n" + e);
-            throw new DbException("Unable to get message metadata from given group " + g, e);
+            logger.warning("Unable to get message metadata (GroupId: " + g + ")\n" + e);
+            throw new DbException("Unable to get message metadata (GroupId: " + g + ")", e);
         }
     }
 
@@ -727,8 +729,8 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             return metadata;
 
         } catch (SQLException e) {
-            logger.warning("Unable to get message metadata with given messageId: " + m + "\n" + e);
-            throw new DbException("Unable to get message metadata with given messageId: " + m, e);
+            logger.warning("Unable to get message metadata (MessageId: " + m + ")\n" + e);
+            throw new DbException("Unable to get message metadata (MessageId: " + m + ")", e);
         }
     }
 
@@ -741,8 +743,8 @@ public abstract class AbstractJdbcDatabase implements JdbcDatabase {
             int affected = prStatement.executeUpdate();
 
         } catch (SQLException e) {
-            logger.warning("Unable to remove message with give id: " + m + "\n" + e);
-            throw new DbException("Unable to remove message with give id: " + m, e);
+            logger.warning("Unable to remove message with given id: " + m + "\n" + e);
+            throw new DbException("Unable to remove message with given id: " + m, e);
         }
     }
 

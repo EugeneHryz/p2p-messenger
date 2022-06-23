@@ -10,7 +10,6 @@ import javax.inject.Inject;
 
 class SettingsManagerImpl implements SettingsManager {
 
-	// TODO: implement
 //	private final DatabaseComponent db;
 
 	@Inject
@@ -19,24 +18,19 @@ class SettingsManagerImpl implements SettingsManager {
 
 	@Override
 	public Settings getSettings(String namespace) throws DbException {
-//		return db.transactionWithResult(true, txn ->
-//				db.getSettings(txn, namespace));
 		return new Settings();
 	}
 
 	@Override
 	public Settings getSettings(Connection txn, String namespace) throws DbException {
-//		return db.getSettings(txn, namespace);
 		return new Settings();
 	}
 
 	@Override
 	public void mergeSettings(Settings s, String namespace) throws DbException {
-//		db.transaction(false, txn -> db.mergeSettings(txn, s, namespace));
 	}
 
 	@Override
 	public void mergeSettings(Connection txn, Settings s, String namespace) throws DbException {
-//		db.mergeSettings(txn, s, namespace);
 	}
 }

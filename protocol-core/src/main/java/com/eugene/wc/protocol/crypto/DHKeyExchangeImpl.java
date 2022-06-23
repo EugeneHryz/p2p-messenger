@@ -5,13 +5,9 @@ import com.eugene.wc.protocol.api.crypto.KeyPair;
 import com.eugene.wc.protocol.api.crypto.PrivateKey;
 import com.eugene.wc.protocol.api.crypto.PublicKey;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
-import com.eugene.wc.protocol.api.crypto.exception.InvalidParameterException;
 
 import org.whispersystems.curve25519.Curve25519;
 import org.whispersystems.curve25519.Curve25519KeyPair;
-
-import java.security.GeneralSecurityException;
-import java.util.logging.Logger;
 
 public class DHKeyExchangeImpl implements DHKeyExchange {
 

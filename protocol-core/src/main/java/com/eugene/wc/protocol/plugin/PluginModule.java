@@ -2,7 +2,6 @@ package com.eugene.wc.protocol.plugin;
 
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
-import com.eugene.wc.protocol.api.plugin.BackoffFactory;
 import com.eugene.wc.protocol.api.plugin.PluginConfig;
 import com.eugene.wc.protocol.api.plugin.PluginManager;
 
@@ -23,13 +22,8 @@ public class PluginModule {
 	}
 
 	@Provides
-	BackoffFactory provideBackoffFactory() {
-		return new BackoffFactoryImpl();
-	}
-
-	@Provides
 	@Singleton
-	PluginManager providePluginManager(LifecycleManager lifecycleManager,
+	public PluginManager providePluginManager(LifecycleManager lifecycleManager,
 									   PluginManagerImpl pluginManager) {
 		lifecycleManager.registerService(pluginManager);
 		return pluginManager;
@@ -37,7 +31,8 @@ public class PluginModule {
 
 	@Provides
 	@Singleton
-	Poller providePoller(PluginConfig config, EventBus eventBus,
+	public Poller providePoller(PluginConfig config,
+						 EventBus eventBus,
 						 PollerImpl poller) {
 		if (config.shouldPoll()) eventBus.addListener(poller);
 		return poller;

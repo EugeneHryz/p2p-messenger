@@ -15,7 +15,6 @@ import androidx.lifecycle.ViewModelProvider;
 import com.eugene.wc.R;
 import com.eugene.wc.activity.ActivityComponent;
 import com.eugene.wc.fragment.BaseFragment;
-import com.eugene.wc.protocol.api.account.UserConstants;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import static com.eugene.wc.login.StartupViewModel.*;

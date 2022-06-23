@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.eugene.wc.contact.ContactListViewModel;
 import com.eugene.wc.contact.add.AddContactViewModel;
+import com.eugene.wc.conversation.ConversationViewModel;
 import com.eugene.wc.home.HomeViewModel;
 import com.eugene.wc.login.StartupViewModel;
 import com.eugene.wc.signup.SignUpViewModel;
@@ -40,7 +41,6 @@ public abstract class ViewModelModule {
 
     @Binds
     @IntoMap
-    @Singleton
     @ClassKey(AddContactViewModel.class)
     public abstract ViewModel bindAddContactViewModel(AddContactViewModel viewModel);
 
@@ -50,5 +50,11 @@ public abstract class ViewModelModule {
     public abstract ViewModel bindContactListViewModel(ContactListViewModel viewModel);
 
     @Binds
-    public abstract ViewModelProvider.Factory bindViewModelProvider(ViewModelFactory factory);
+    @IntoMap
+    @ClassKey(ConversationViewModel.class)
+    public abstract ViewModel bindConversationViewModel(ConversationViewModel viewModel);
+
+    @Binds
+    @Singleton
+    public abstract ViewModelProvider.Factory bindViewModelFactory(ViewModelFactory factory);
 }

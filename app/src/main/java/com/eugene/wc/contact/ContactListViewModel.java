@@ -1,5 +1,7 @@
 package com.eugene.wc.contact;
 
+import android.util.Log;
+
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
@@ -10,6 +12,7 @@ import com.eugene.wc.protocol.api.contact.Contact;
 import com.eugene.wc.protocol.api.contact.ContactId;
 import com.eugene.wc.protocol.api.contact.ContactManager;
 import com.eugene.wc.protocol.api.db.DbExecutor;
+import com.eugene.wc.protocol.api.db.exception.DbException;
 import com.eugene.wc.protocol.api.event.Event;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.event.EventListener;
@@ -54,10 +57,17 @@ public class ContactListViewModel extends ViewModel implements EventListener {
 
     public void loadContacts() {
         dbExecutor.execute(() -> {
-            List<Contact> contacts = contactManager.getAllContacts();
+            List<Contact> contacts = null;
+            try {
+                contacts = contactManager.getAllContacts();
+            } catch (DbException e) {
+                Log.w(TAG, "Unable to load get contacts", e);
+            }
 
-            List<ContactItem> contactItems = convertContacts(contacts);
-            this.contacts.postValue(contactItems);
+            if (contacts != null) {
+                List<ContactItem> contactItems = convertContacts(contacts);
+                this.contacts.postValue(contactItems);
+            }
         });
     }
 
@@ -65,15 +75,11 @@ public class ContactListViewModel extends ViewModel implements EventListener {
     public void onEventOccurred(Event e) {
         if (e instanceof ContactConnectedEvent) {
             ContactConnectedEvent event = (ContactConnectedEvent) e;
-            Contact c = contactManager.getContactById(event.getContactId());
-
-            updateContactStatus(c.getId(), true);
+            updateContactStatus(event.getContactId(), true);
 
         } else if (e instanceof ContactDisconnectedEvent) {
             ContactDisconnectedEvent event = (ContactDisconnectedEvent) e;
-            Contact c = contactManager.getContactById(event.getContactId());
-
-            updateContactStatus(c.getId(), false);
+            updateContactStatus(event.getContactId(), false);
         }
     }
 

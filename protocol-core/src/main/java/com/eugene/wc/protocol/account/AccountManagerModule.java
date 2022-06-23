@@ -2,8 +2,6 @@ package com.eugene.wc.protocol.account;
 
 import com.eugene.wc.protocol.api.account.AccountManager;
 import com.eugene.wc.protocol.api.account.PasswordStrengthEstimator;
-import com.eugene.wc.protocol.api.crypto.CryptoComponent;
-import com.eugene.wc.protocol.api.db.DatabaseConfig;
 
 import javax.inject.Singleton;
 

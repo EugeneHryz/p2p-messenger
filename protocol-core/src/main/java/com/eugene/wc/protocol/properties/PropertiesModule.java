@@ -14,7 +14,6 @@ import dagger.Provides;
 public class PropertiesModule {
 
 	public static class EagerSingletons {
-
 		@Inject
 		TransportPropertyManager transportPropertyManager;
 	}
@@ -22,10 +21,10 @@ public class PropertiesModule {
 	@Provides
 	@Singleton
 	TransportPropertyManager getTransportPropertyManager(LifecycleManager lifecycleManager,
-			ContactManager contactManager, TransportPropertyManagerImpl transportPropertyManager) {
-		lifecycleManager.registerDatabaseOpenListener(transportPropertyManager);
-		contactManager.registerContactHook(transportPropertyManager);
-
-		return transportPropertyManager;
+														 ContactManager contactManager,
+														 TransportPropertyManagerImpl tpm) {
+		lifecycleManager.registerDatabaseOpenListener(tpm);
+		contactManager.registerContactHook(tpm);
+		return tpm;
 	}
 }

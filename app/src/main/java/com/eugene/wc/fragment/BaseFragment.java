@@ -10,8 +10,6 @@ import com.eugene.wc.activity.BaseActivity;
 
 public abstract class BaseFragment extends Fragment {
 
-    // interface for interacting with hosting activity??
-
     protected abstract void injectFragment(ActivityComponent activityComponent);
 
     @Override

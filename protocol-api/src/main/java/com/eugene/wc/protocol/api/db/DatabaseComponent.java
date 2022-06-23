@@ -53,6 +53,8 @@ public interface DatabaseComponent {
 
     Message getMessage(Connection txn, MessageId m) throws DbException;
 
+    List<MessageId> getMessageIds(Connection txn, GroupId groupId) throws DbException;
+
     Map<MessageId, Metadata> getMessageMetadata(Connection txn, GroupId g) throws DbException;
 
     Metadata getMessageMetadata(Connection txn, MessageId m) throws DbException;

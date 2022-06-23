@@ -9,7 +9,6 @@ import static com.eugene.wc.protocol.api.util.NetworkUtils.getNetworkInterfaces;
 import static com.eugene.wc.protocol.api.util.PrivacyUtils.scrubSocketAddress;
 import static com.eugene.wc.protocol.api.util.StringUtils.isNullOrEmpty;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.list;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
@@ -52,8 +51,7 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 
 	private static final Logger logger = getLogger(TcpPlugin.class.getName());
 
-	private static final Pattern DOTTED_QUAD =
-			Pattern.compile("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
+	private static final Pattern DOTTED_QUAD = Pattern.compile("^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$");
 
 	protected final Executor ioExecutor, wakefulIoExecutor, bindExecutor;
 	protected final Backoff backoff;
@@ -81,7 +79,8 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 	 * Returns zero or more socket addresses for connecting to a contact with
 	 * the given transport properties.
 	 */
-	protected abstract List<InetSocketAddress> getRemoteSocketAddresses(TransportProperties p, boolean ipv4);
+	protected abstract List<InetSocketAddress> getRemoteSocketAddresses(TransportProperties p,
+																		boolean ipv4);
 
 	/**
 	 * Returns true if connections to the given address can be attempted.
@@ -273,6 +272,7 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 			// Don't try to connect to our own address
 			if (!canConnectToOwnAddress() &&
 					remote.getAddress().equals(ss.getInetAddress())) {
+				logger.warning("Attempting to connect to our own address");
 				continue;
 			}
 			if (!isConnectable(local, remote)) {
@@ -346,23 +346,10 @@ abstract class TcpPlugin implements DuplexPlugin, EventListener {
 		return false;
 	}
 
-//	@Override
-//	public boolean supportsRendezvous() {
-//		return false;
-//	}
-
 	public List<InterfaceAddress> getLocalInterfaceAddresses() {
 		List<InterfaceAddress> addrs = new ArrayList<>();
 		for (NetworkInterface iface : getNetworkInterfaces()) {
 			addrs.addAll(iface.getInterfaceAddresses());
-		}
-		return addrs;
-	}
-
-	public List<InetAddress> getLocalInetAddresses() {
-		List<InetAddress> addrs = new ArrayList<>();
-		for (NetworkInterface iface : getNetworkInterfaces()) {
-			addrs.addAll(list(iface.getInetAddresses()));
 		}
 		return addrs;
 	}

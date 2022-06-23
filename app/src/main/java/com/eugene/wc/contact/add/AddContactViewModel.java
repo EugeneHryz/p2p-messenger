@@ -11,7 +11,6 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.work.Data;
 import androidx.work.PeriodicWorkRequest;
-import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
@@ -117,6 +116,7 @@ public class AddContactViewModel extends AndroidViewModel implements EventListen
         this.ioExecutor = ioExecutor;
         this.ket = ket;
 
+        Log.d(TAG, "in constructor");
         eventBus.addListener(this);
     }
 
@@ -124,7 +124,9 @@ public class AddContactViewModel extends AndroidViewModel implements EventListen
     protected void onCleared() {
         eventBus.removeListener(this);
 
+        Log.d(TAG, "onCleared");
         if (startedListening) {
+            Log.d(TAG, "about to stop listening");
             ioExecutor.execute(ket::stopListening);
         }
     }
@@ -139,10 +141,9 @@ public class AddContactViewModel extends AndroidViewModel implements EventListen
             ioExecutor.execute(() -> {
                 try {
                     String encoded = encodePayload(localPayload);
-
                     encodedPayload.postValue(encoded);
                 } catch (EncodeException | UnsupportedEncodingException exc) {
-                    // show an error msg to user?
+                    // show an error message to user?
                     Log.w(TAG, "Unable to encode payload", exc);
                 }
             });
@@ -244,7 +245,7 @@ public class AddContactViewModel extends AndroidViewModel implements EventListen
             PayloadEncoder payloadEncoder = new PayloadEncoderImpl(dataWriter);
             payloadEncoder.encode(payload);
 
-            String encodedP = new String(baos.toByteArray(), StandardCharsets.ISO_8859_1);
+            String encodedP = baos.toString(StandardCharsets.ISO_8859_1.toString());
             Log.d(TAG, "Encoded payload: " + encodedP);
             return encodedP;
         } finally {

@@ -15,17 +15,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-class AndroidBluetoothTransportConnection extends AbstractDuplexTransportConnection {
+public class AndroidBluetoothTransportConnection extends AbstractDuplexTransportConnection {
 
 	private final BluetoothConnectionLimiter connectionLimiter;
 	private final BluetoothSocket socket;
 	private final InputStream in;
 	private final AndroidWakeLock wakeLock;
 
-	AndroidBluetoothTransportConnection(Plugin plugin,
-										BluetoothConnectionLimiter connectionLimiter,
-										AndroidWakeLockManager wakeLockManager,
-										BluetoothSocket socket) throws IOException {
+	public AndroidBluetoothTransportConnection(Plugin plugin,
+											   BluetoothConnectionLimiter connectionLimiter,
+											   AndroidWakeLockManager wakeLockManager,
+											   BluetoothSocket socket) throws IOException {
 		super(plugin);
 		this.connectionLimiter = connectionLimiter;
 		this.socket = socket;

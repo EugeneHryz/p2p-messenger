@@ -80,6 +80,12 @@ public class MessageWriterImpl implements MessageWriter {
         content[0] = END_OF_SESSION;
 
         encryptAndSend(content);
+        writer.flush();
+    }
+
+    @Override
+    public void close() throws IOException {
+        writer.close();
     }
 
     private void encryptAndSend(byte[] data) throws IOException, CryptoException {

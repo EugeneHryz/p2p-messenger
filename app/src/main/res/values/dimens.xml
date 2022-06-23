@@ -4,8 +4,10 @@
     <dimen name="splash_image_size">240dp</dimen>
     <dimen name="empty_list_icon_size">160dp</dimen>
 
-    <dimen name="huge_text">32sp</dimen>
-    <dimen name="medium_text">20sp</dimen>
+    <dimen name="huge_text_size">32sp</dimen>
+    <dimen name="medium_text_size">20sp</dimen>
+    <dimen name="small_text_size">16sp</dimen>
+    <dimen name="tiny_text_size">12sp</dimen>
     <dimen name="fab_margin">15dp</dimen>
 
     <dimen name="activity_horizontal_margin">15dp</dimen>
@@ -25,4 +27,21 @@
     <dimen name="fab_corner_radius">8dp</dimen>
 
     <dimen name="contact_status_size">24dp</dimen>
+
+    <dimen name="small_button_size">52dp</dimen>
+    <dimen name="emoji_icon_scale" format="float">1.5</dimen>
+
+    <dimen name="text_input_padding">4dp</dimen>
+    <dimen name="medium_elevation">8dp</dimen>
+
+    <dimen name="msg_bubble_regular_corner_radius">16dp</dimen>
+    <dimen name="msg_bubble_tiny_corner_radius">2dp</dimen>
+    <dimen name="msg_bubble_padding">2dp</dimen>
+    <dimen name="msg_bubble_elevation">3dp</dimen>
+    <dimen name="msg_text_horizontal_margin">10dp</dimen>
+    <dimen name="msg_text_top_margin">4dp</dimen>
+    <dimen name="msg_text_bottom_margin">2dp</dimen>
+    <dimen name="msg_status_horizontal_margin">10dp</dimen>
+    <dimen name="msg_bubble_outer_small_margin">6dp</dimen>
+    <dimen name="msg_bubble_outer_big_margin">60dp</dimen>
 </resources>

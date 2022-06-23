@@ -22,8 +22,8 @@ public class KeyExchangeTransport {
     private static final Predicate<Record> ACCEPT_KEY = (r) -> r.getType() == Record.Type.KEY
                                                 || r.getType() == Record.Type.ABORT;
 
-    private RecordWriter recordWriter;
-    private RecordReader recordReader;
+    private final RecordWriter recordWriter;
+    private final RecordReader recordReader;
     private final KeyExchangeConnection connection;
 
     public KeyExchangeTransport(KeyExchangeConnection kec) {

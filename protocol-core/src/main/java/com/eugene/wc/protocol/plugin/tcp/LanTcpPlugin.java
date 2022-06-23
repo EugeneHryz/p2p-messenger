@@ -78,9 +78,9 @@ public class LanTcpPlugin extends TcpPlugin {
 	static {
 		try {
 			WIFI_AP_ADDRESS = InetAddress.getByAddress(
-					new byte[] {(byte) 192, (byte) 168, 43, 1});
+					new byte[]{(byte) 192, (byte) 168, 43, 1});
 			WIFI_DIRECT_AP_ADDRESS = InetAddress.getByAddress(
-					new byte[] {(byte) 192, (byte) 168, 49, 1});
+					new byte[]{(byte) 192, (byte) 168, 49, 1});
 		} catch (UnknownHostException e) {
 			// Should only be thrown if the address has an illegal length
 			throw new AssertionError(e);

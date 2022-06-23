@@ -9,7 +9,6 @@ import com.eugene.wc.protocol.api.account.AccountManager;
 import com.eugene.wc.protocol.api.account.PasswordStrengthEstimator;
 import com.eugene.wc.protocol.api.account.PasswordStrengthEstimator.Strength;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
-import com.eugene.wc.protocol.api.crypto.exception.EncryptionException;
 import com.eugene.wc.protocol.api.io.IoExecutor;
 
 import java.util.concurrent.Executor;
@@ -42,12 +41,6 @@ public class SignUpViewModel extends ViewModel {
         this.accountManager = accountManager;
         ioExecutor = executor;
         passwordStrengthEstimator = psEstimator;
-
-//        ioExecutor.execute(() -> {
-//            if (!accountManager.accountExists()) {
-//                state.postEvent(State.SET_NICKNAME);
-//            }
-//        });
     }
 
     public void createAccount(String password) {

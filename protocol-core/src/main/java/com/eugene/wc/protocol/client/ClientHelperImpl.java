@@ -37,28 +37,22 @@ import javax.inject.Inject;
 @Immutable
 public class ClientHelperImpl implements ClientHelper {
 
-	/**
-	 * Length in bytes of the random salt used for creating local messages for
-	 * storing metadata.
-	 */
-	private static final int SALT_LENGTH = 32;
-
 	private final DatabaseComponent db;
 	private final MessageFactory messageFactory;
 	private final MetadataParser metadataParser;
 	private final MetadataEncoder metadataEncoder;
-	private final CryptoComponent crypto;
 	private final IdentityFactory identityFactory;
 
 	@Inject
-    public ClientHelperImpl(DatabaseComponent db, MessageFactory messageFactory,
-							MetadataParser metadataParser, MetadataEncoder metadataEncoder,
-							CryptoComponent crypto, IdentityFactory identityFactory) {
+    public ClientHelperImpl(DatabaseComponent db,
+							MessageFactory messageFactory,
+							MetadataParser metadataParser,
+							MetadataEncoder metadataEncoder,
+							IdentityFactory identityFactory) {
 		this.db = db;
 		this.messageFactory = messageFactory;
 		this.metadataParser = metadataParser;
 		this.metadataEncoder = metadataEncoder;
-		this.crypto = crypto;
 		this.identityFactory = identityFactory;
 	}
 
@@ -71,10 +65,8 @@ public class ClientHelperImpl implements ClientHelper {
 
 	@Override
 	public void addLocalMessage(Connection txn, Message m, WdfDictionary2 metadata,
-								boolean shared, boolean temporary)
-			throws DbException, FormatException {
-		db.addLocalMessage(txn, m, metadataEncoder.encode(metadata), shared,
-				temporary);
+								boolean shared, boolean temporary) throws DbException, FormatException {
+		db.addLocalMessage(txn, m, metadataEncoder.encode(metadata), shared, temporary);
 	}
 
 	@Override
@@ -135,8 +127,9 @@ public class ClientHelperImpl implements ClientHelper {
 	}
 
 	@Override
-	public Map<MessageId, WdfDictionary2> getMessageMetadataAsDictionary(
-			Connection txn, GroupId g) throws DbException, FormatException {
+	public Map<MessageId, WdfDictionary2> getMessageMetadataAsDictionary(Connection txn, GroupId g)
+			throws DbException, FormatException {
+
 		Map<MessageId, Metadata> raw = db.getMessageMetadata(txn, g);
 		Map<MessageId, WdfDictionary2> parsed = new HashMap<>(raw.size());
 		for (Map.Entry<MessageId, Metadata> e : raw.entrySet())
@@ -259,9 +252,7 @@ public class ClientHelperImpl implements ClientHelper {
 	}
 
 	@Override
-	public TransportProperties parseTransportProperties(
-			WdfDictionary2 properties) throws FormatException {
-		// fixme: removed validation
+	public TransportProperties parseTransportProperties(WdfDictionary2 properties) throws FormatException {
 		TransportProperties p = new TransportProperties();
 		for (String key : properties.keySet()) {
 			String value = properties.getString(key);

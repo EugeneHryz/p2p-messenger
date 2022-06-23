@@ -31,18 +31,4 @@ public interface DuplexPlugin extends Plugin {
 	DuplexTransportConnection createKeyExchangeConnection(
 			byte[] remoteCommitment, WdfList descriptor);
 
-	/**
-	 * Returns true if the plugin supports rendezvous connections.
-	 */
-//	boolean supportsRendezvous();
-
-	/**
-	 * Creates and returns an endpoint that uses the given key material to
-	 * rendezvous with a pending contact, and the given connection handler to
-	 * handle incoming connections. Returns null if an endpoint cannot be
-	 * created.
-	 */
-//	@Nullable
-//	RendezvousEndpoint createRendezvousEndpoint(KeyMaterialSource k,
-//			boolean alice, ConnectionHandler incoming);
 }

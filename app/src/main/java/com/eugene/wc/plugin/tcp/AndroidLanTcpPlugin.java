@@ -3,7 +3,6 @@ package com.eugene.wc.plugin.tcp;
 import static android.content.Context.CONNECTIVITY_SERVICE;
 import static android.content.Context.WIFI_SERVICE;
 import static android.net.NetworkCapabilities.TRANSPORT_WIFI;
-import static android.os.Build.VERSION.SDK_INT;
 import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.DEFAULT_PREF_PLUGIN_ENABLE;
 import static com.eugene.wc.protocol.api.plugin.Plugin.State.ACTIVE;
 import static com.eugene.wc.protocol.api.plugin.Plugin.State.INACTIVE;
@@ -50,11 +49,9 @@ import java.util.regex.Pattern;
 
 import javax.net.SocketFactory;
 
-
 public class AndroidLanTcpPlugin extends LanTcpPlugin {
 
-	private static final Logger LOG =
-			getLogger(AndroidLanTcpPlugin.class.getName());
+	private static final Logger logger = getLogger(AndroidLanTcpPlugin.class.getName());
 
 	/**
 	 * The interface name is used as a heuristic for deciding whether the
@@ -70,13 +67,13 @@ public class AndroidLanTcpPlugin extends LanTcpPlugin {
 	private volatile SocketFactory socketFactory;
 
 	public AndroidLanTcpPlugin(Executor ioExecutor,
-			Executor wakefulIoExecutor,
-			Application app,
-			Backoff backoff,
-			PluginCallback callback,
-			long maxLatency,
-			int maxIdleTime,
-			int connectionTimeout) {
+							   Executor wakefulIoExecutor,
+							   Application app,
+							   Backoff backoff,
+							   PluginCallback callback,
+							   long maxLatency,
+							   int maxIdleTime,
+							   int connectionTimeout) {
 		super(ioExecutor, wakefulIoExecutor, backoff, callback, maxLatency,
 				maxIdleTime, connectionTimeout);
 		// Don't execute more than one connection status check at a time
@@ -115,7 +112,7 @@ public class AndroidLanTcpPlugin extends LanTcpPlugin {
 		// If there's no wifi IPv4 address, we might be a client on an
 		// IPv6-only wifi network. We can only detect this on API 21+
 		if (wifi == null) {
-			return SDK_INT >= 21 ? getWifiClientIpv6Address() : null;
+			return getWifiClientIpv6Address();
 		}
 		// Use the wifi IPv4 address to determine which interface's IPv6
 		// address we should return (if the interface has a suitable address)
@@ -198,7 +195,7 @@ public class AndroidLanTcpPlugin extends LanTcpPlugin {
 			// No suitable address
 			return null;
 		} catch (SocketException e) {
-			logException(LOG, WARNING, e);
+			logException(logger, WARNING, e);
 			return null;
 		}
 	}
@@ -217,10 +214,7 @@ public class AndroidLanTcpPlugin extends LanTcpPlugin {
 		}
 	}
 
-	// On API 21 and later, a socket that is not created with the wifi
-	// network's socket factory may try to connect via another network
 	private SocketFactory getSocketFactory() {
-		if (SDK_INT < 21) return SocketFactory.getDefault();
 		for (Network net : connectivityManager.getAllNetworks()) {
 			NetworkCapabilities caps =
 					connectivityManager.getNetworkCapabilities(net);
@@ -228,7 +222,7 @@ public class AndroidLanTcpPlugin extends LanTcpPlugin {
 				return net.getSocketFactory();
 			}
 		}
-		LOG.warning("Could not find suitable socket factory");
+		logger.warning("Could not find suitable socket factory");
 		return SocketFactory.getDefault();
 	}
 
@@ -244,19 +238,19 @@ public class AndroidLanTcpPlugin extends LanTcpPlugin {
 			if (s != ACTIVE && s != INACTIVE) return;
 			Pair<InetAddress, Boolean> wifi = getPreferredWifiAddress();
 			if (wifi == null) {
-				LOG.info("Not connected to wifi");
+				logger.info("Not connected to wifi");
 				socketFactory = SocketFactory.getDefault();
 				// Server sockets may not have been closed automatically when
 				// interface was taken down. If any sockets are open, closing
 				// them here will cause the sockets to be cleared and the state
 				// to be updated in acceptContactConnections()
 				if (s == ACTIVE) {
-					LOG.info("Closing server sockets");
-					tryToClose(state.getServerSocket(true), LOG, WARNING);
-					tryToClose(state.getServerSocket(false), LOG, WARNING);
+					logger.info("Closing server sockets");
+					tryToClose(state.getServerSocket(true), logger, WARNING);
+					tryToClose(state.getServerSocket(false), logger, WARNING);
 				}
 			} else if (wifi.getSecond()) {
-				LOG.info("Providing wifi hotspot");
+				logger.info("Providing wifi hotspot");
 				// There's no corresponding Network object and thus no way
 				// to get a suitable socket factory, so we won't be able to
 				// make outgoing connections on API 21+ if another network
@@ -264,7 +258,7 @@ public class AndroidLanTcpPlugin extends LanTcpPlugin {
 				socketFactory = SocketFactory.getDefault();
 				bind();
 			} else {
-				LOG.info("Connected to wifi");
+				logger.info("Connected to wifi");
 				socketFactory = getSocketFactory();
 				bind();
 			}
@@ -282,7 +276,7 @@ public class AndroidLanTcpPlugin extends LanTcpPlugin {
 		Pair<InetAddress, Boolean> wifi = getWifiIpv4Address();
 		// If there's no wifi IPv4 address, we might be a client on an
 		// IPv6-only wifi network. We can only detect this on API 21+
-		if (wifi == null && SDK_INT >= 21) {
+		if (wifi == null) {
 			InetAddress ipv6 = getWifiClientIpv6Address();
 			if (ipv6 != null) return new Pair<>(ipv6, false);
 		}

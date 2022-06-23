@@ -30,10 +30,9 @@ import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 
 @ThreadSafe
-class ConnectionRegistryImpl implements ConnectionRegistry {
+public class ConnectionRegistryImpl implements ConnectionRegistry {
 
-	private static final Logger LOG =
-			getLogger(ConnectionRegistryImpl.class.getName());
+	private static final Logger LOG = getLogger(ConnectionRegistryImpl.class.getName());
 
 	private final EventBus eventBus;
 	private final Map<TransportId, List<TransportId>> transportPrefs;
@@ -43,7 +42,7 @@ class ConnectionRegistryImpl implements ConnectionRegistry {
 	private final Map<ContactId, List<ConnectionRecord>> contactConnections;
 
 	@Inject
-    ConnectionRegistryImpl(EventBus eventBus, PluginConfig pluginConfig) {
+    public ConnectionRegistryImpl(EventBus eventBus, PluginConfig pluginConfig) {
 		this.eventBus = eventBus;
 		transportPrefs = pluginConfig.getTransportPreferences();
 		contactConnections = new HashMap<>();
@@ -57,7 +56,8 @@ class ConnectionRegistryImpl implements ConnectionRegistry {
 
 	@Override
 	public void registerOutgoingConnection(ContactId c, TransportId t,
-			DuplexTransportConnection conn, Priority priority) {
+										   DuplexTransportConnection conn,
+										   Priority priority) {
 		registerConnection(c, t, conn, false);
 		setPriority(c, t, conn, priority);
 	}
@@ -70,11 +70,7 @@ class ConnectionRegistryImpl implements ConnectionRegistry {
 		}
 		boolean firstConnection;
 		synchronized (lock) {
-			List<ConnectionRecord> recs = contactConnections.get(c);
-			if (recs == null) {
-				recs = new ArrayList<>();
-				contactConnections.put(c, recs);
-			}
+			List<ConnectionRecord> recs = contactConnections.computeIfAbsent(c, k -> new ArrayList<>());
 			firstConnection = recs.isEmpty();
 			recs.add(new ConnectionRecord(t, conn, incoming));
 		}

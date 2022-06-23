@@ -16,10 +16,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Logger;
 
-class RenewableWakeLock implements SharedWakeLock {
+public class RenewableWakeLock implements SharedWakeLock {
 
-	private static final Logger LOG =
-			getLogger(RenewableWakeLock.class.getName());
+	private static final Logger LOG = getLogger(RenewableWakeLock.class.getName());
 
 	private final PowerManager powerManager;
 	private final ScheduledExecutorService scheduledExecutorService;
@@ -35,12 +34,12 @@ class RenewableWakeLock implements SharedWakeLock {
 	private int refCount = 0;
 	private long acquired = 0;
 
-	RenewableWakeLock(PowerManager powerManager,
-			ScheduledExecutorService scheduledExecutorService,
-			int levelAndFlags,
-			String tag,
-			long durationMs,
-			long safetyMarginMs) {
+	public RenewableWakeLock(PowerManager powerManager,
+							 ScheduledExecutorService scheduledExecutorService,
+							 int levelAndFlags,
+							 String tag,
+							 long durationMs,
+							 long safetyMarginMs) {
 		this.powerManager = powerManager;
 		this.scheduledExecutorService = scheduledExecutorService;
 		this.levelAndFlags = levelAndFlags;

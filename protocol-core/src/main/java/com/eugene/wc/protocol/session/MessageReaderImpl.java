@@ -102,6 +102,11 @@ public class MessageReaderImpl implements MessageReader {
         return new Ack(localId, remoteId);
     }
 
+    @Override
+    public void close() throws IOException {
+        reader.close();
+    }
+
     private void readNextAndDecrypt() throws IOException, DecryptionException {
         if (readNextPacket) {
             throw new IllegalStateException();

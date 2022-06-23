@@ -19,4 +19,9 @@
     <color name="wc_gray">#8F919A</color>
     <color name="wc_medium_gray">#9B9B9C</color>
     <color name="wc_light_gray">#C1C1C2</color>
+
+    <color name="incoming_msg_bubble_color">#FFFFFF</color>
+    <color name="outgoing_msg_bubble_color">#418cd8</color>
+
+    <color name="out_msg_timestamp_color">#dfdfdf</color>
 </resources>

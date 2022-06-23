@@ -6,20 +6,19 @@ import com.eugene.wc.protocol.api.session.Message;
 import com.eugene.wc.protocol.api.session.MessageWriter;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class SessionWriter extends Thread {
 
-    private static final Logger logger = Logger.getLogger(SessionReader.class.getName());
+    private static final Logger logger = Logger.getLogger(SessionWriter.class.getName());
 
-    private final MessageWriter messageWriter;
+    private final MessageWriter writer;
     private final MessageQueue messagesToSend;
 
     private volatile boolean interrupted;
 
-    public SessionWriter(MessageWriter messageWriter, MessageQueue messageQueue) {
-        this.messageWriter = messageWriter;
+    public SessionWriter(MessageWriter writer, MessageQueue messageQueue) {
+        this.writer = writer;
         messagesToSend = messageQueue;
     }
 
@@ -29,10 +28,10 @@ public class SessionWriter extends Thread {
             while (!interrupted) {
                 Message nextMessage = messagesToSend.pollMessage();
                 if (nextMessage != null) {
-                    messageWriter.sendMessage(nextMessage);
+                    writer.sendMessage(nextMessage);
                 }
             }
-            messageWriter.sendEndOfSession();
+            writer.sendEndOfSession();
 
         } catch (IOException e) {
             logger.warning("IO error occurred\n" + e);

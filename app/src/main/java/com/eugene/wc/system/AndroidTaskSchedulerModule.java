@@ -1,7 +1,5 @@
 package com.eugene.wc.system;
 
-import android.app.Application;
-
 import com.eugene.wc.protocol.api.lifecycle.LifecycleManager;
 import com.eugene.wc.protocol.api.system.AndroidWakeLockManager;
 import com.eugene.wc.protocol.api.system.TaskScheduler;
@@ -24,19 +22,13 @@ public class AndroidTaskSchedulerModule {
 
 	@Provides
 	@Singleton
-    AndroidTaskScheduler provideAndroidTaskScheduler(LifecycleManager lifecycleManager, Application app,
-			AndroidWakeLockManager wakeLockManager, ScheduledExecutorService scheduledExecutorService) {
-
-		AndroidTaskScheduler scheduler = new AndroidTaskScheduler(app, wakeLockManager, scheduledExecutorService);
+    AndroidTaskScheduler provideAndroidTaskScheduler(LifecycleManager lifecycleManager,
+													 AndroidWakeLockManager wakeLockManager,
+													 ScheduledExecutorService scheduledExecutorService) {
+		AndroidTaskScheduler scheduler = new AndroidTaskScheduler(wakeLockManager, scheduledExecutorService);
 		lifecycleManager.registerService(scheduler);
 		return scheduler;
 	}
-
-//	@Provides
-//	@Singleton
-//	AlarmListener provideAlarmListener(org.briarproject.bramble.system.AndroidTaskScheduler scheduler) {
-//		return scheduler;
-//	}
 
 	@Provides
 	@Singleton

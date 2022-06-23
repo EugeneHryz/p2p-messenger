@@ -5,12 +5,12 @@ import static com.eugene.wc.protocol.api.plugin.LanTcpConstants.ID;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.io.IoExecutor;
 import com.eugene.wc.protocol.api.plugin.Backoff;
-import com.eugene.wc.protocol.api.plugin.BackoffFactory;
 import com.eugene.wc.protocol.api.plugin.PluginCallback;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPlugin;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPluginFactory;
 import com.eugene.wc.protocol.api.system.WakefulIoExecutor;
+import com.eugene.wc.protocol.plugin.BackoffImpl;
 
 import java.util.concurrent.Executor;
 
@@ -29,17 +29,14 @@ public class LanTcpPluginFactory implements DuplexPluginFactory {
 
 	private final Executor ioExecutor, wakefulIoExecutor;
 	private final EventBus eventBus;
-	private final BackoffFactory backoffFactory;
 
 	@Inject
 	public LanTcpPluginFactory(@IoExecutor Executor ioExecutor,
 			@WakefulIoExecutor Executor wakefulIoExecutor,
-			EventBus eventBus,
-			BackoffFactory backoffFactory) {
+			EventBus eventBus) {
 		this.ioExecutor = ioExecutor;
 		this.wakefulIoExecutor = wakefulIoExecutor;
 		this.eventBus = eventBus;
-		this.backoffFactory = backoffFactory;
 	}
 
 	@Override
@@ -54,8 +51,7 @@ public class LanTcpPluginFactory implements DuplexPluginFactory {
 
 	@Override
 	public DuplexPlugin createPlugin(PluginCallback callback) {
-		Backoff backoff = backoffFactory.createBackoff(MIN_POLLING_INTERVAL,
-				MAX_POLLING_INTERVAL, BACKOFF_BASE);
+		Backoff backoff = new BackoffImpl(MIN_POLLING_INTERVAL, MAX_POLLING_INTERVAL, BACKOFF_BASE);
 		LanTcpPlugin plugin = new LanTcpPlugin(ioExecutor, wakefulIoExecutor,
 				backoff, callback, MAX_LATENCY, MAX_IDLE_TIME,
 				CONNECTION_TIMEOUT);

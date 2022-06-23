@@ -9,6 +9,7 @@
         <item name="colorSecondaryVariant">@color/secondary_dark_color</item>
         <item name="colorOnSecondary">@color/secondary_text_color</item>
 
+        <item name="colorAccent">@color/primary_dark_color</item>
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
 
     </style>
@@ -19,13 +20,13 @@
     </style>
 
     <style name="HugeText">
-        <item name="android:textSize">@dimen/huge_text</item>
+        <item name="android:textSize">@dimen/huge_text_size</item>
         <item name="android:textColor">@color/primary_text_color</item>
         <item name="android:textStyle">bold</item>
     </style>
 
     <style name="MediumText">
-        <item name="android:textSize">@dimen/medium_text</item>
+        <item name="android:textSize">@dimen/medium_text_size</item>
         <item name="android:textColor">@android:color/tab_indicator_text</item>
     </style>
 

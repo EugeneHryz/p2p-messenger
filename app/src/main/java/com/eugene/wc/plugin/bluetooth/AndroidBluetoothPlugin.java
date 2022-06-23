@@ -1,21 +1,9 @@
 package com.eugene.wc.plugin.bluetooth;
 
 import static android.bluetooth.BluetoothAdapter.*;
-import static android.bluetooth.BluetoothAdapter.ACTION_DISCOVERY_FINISHED;
-import static android.bluetooth.BluetoothAdapter.ACTION_DISCOVERY_STARTED;
-import static android.bluetooth.BluetoothAdapter.ACTION_SCAN_MODE_CHANGED;
-import static android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED;
-import static android.bluetooth.BluetoothAdapter.EXTRA_SCAN_MODE;
-import static android.bluetooth.BluetoothAdapter.EXTRA_STATE;
-import static android.bluetooth.BluetoothAdapter.SCAN_MODE_CONNECTABLE;
-import static android.bluetooth.BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE;
-import static android.bluetooth.BluetoothAdapter.SCAN_MODE_NONE;
-import static android.bluetooth.BluetoothAdapter.STATE_OFF;
-import static android.bluetooth.BluetoothAdapter.STATE_ON;
 import static android.bluetooth.BluetoothDevice.ACTION_FOUND;
 import static android.bluetooth.BluetoothDevice.DEVICE_TYPE_LE;
 import static android.bluetooth.BluetoothDevice.EXTRA_DEVICE;
-import static android.os.Build.VERSION.SDK_INT;
 import static com.eugene.wc.protocol.api.util.PrivacyUtils.scrubMacAddress;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -57,11 +45,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Logger;
 
-
 public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSocket, BluetoothServerSocket> {
 
-	private static final Logger LOG =
-			getLogger(AndroidBluetoothPlugin.class.getName());
+	private static final Logger logger = getLogger(AndroidBluetoothPlugin.class.getName());
 
 	private static final int MAX_DISCOVERY_MS = 10_000;
 
@@ -76,17 +62,17 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 	private volatile boolean stopDiscoverAndConnect;
 
 	public AndroidBluetoothPlugin(BluetoothConnectionLimiter connectionLimiter,
-						   BluetoothConnectionFactory<BluetoothSocket> connectionFactory,
-						   Executor ioExecutor,
-						   Executor wakefulIoExecutor,
-						   SecureRandom secureRandom,
-						   AndroidExecutor androidExecutor,
-						   Application app,
-						   Clock clock,
-						   Backoff backoff,
-						   PluginCallback callback,
-						   long maxLatency,
-						   int maxIdleTime) {
+								  BluetoothConnectionFactory<BluetoothSocket> connectionFactory,
+								  Executor ioExecutor,
+								  Executor wakefulIoExecutor,
+								  SecureRandom secureRandom,
+								  AndroidExecutor androidExecutor,
+								  Application app,
+								  Clock clock,
+								  Backoff backoff,
+								  PluginCallback callback,
+								  long maxLatency,
+								  int maxIdleTime) {
 		super(connectionLimiter, connectionFactory, ioExecutor,
 				wakefulIoExecutor, secureRandom, backoff, callback,
 				maxLatency, maxIdleTime);
@@ -109,7 +95,9 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 	@Override
 	public void stop() {
 		super.stop();
-		if (receiver != null) app.unregisterReceiver(receiver);
+		if (receiver != null) {
+			app.unregisterReceiver(receiver);
+		}
 	}
 
 	@Override
@@ -117,13 +105,14 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 		// BluetoothAdapter.getDefaultAdapter() must be called on a thread
 		// with a message queue, so submit it to the AndroidExecutor
 		try {
-			adapter = androidExecutor.runOnBackgroundThread(
-					BluetoothAdapter::getDefaultAdapter).get();
+			adapter = androidExecutor.runOnBackgroundThread(BluetoothAdapter::getDefaultAdapter)
+					.get();
 		} catch (InterruptedException | ExecutionException e) {
 			throw new IOException(e);
 		}
-		if (adapter == null)
+		if (adapter == null) {
 			throw new IOException("Bluetooth is not supported");
+		}
 	}
 
 	@Override
@@ -146,7 +135,7 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 
 	@Override
 	public void tryToClose(BluetoothServerSocket ss) {
-		IoUtils.tryToClose(ss, LOG, WARNING);
+		IoUtils.tryToClose(ss, logger, WARNING);
 	}
 
 	@Override
@@ -171,12 +160,12 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 			s.connect();
 			return connectionFactory.wrapSocket(this, s);
 		} catch (IOException e) {
-			IoUtils.tryToClose(s, LOG, WARNING);
+			IoUtils.tryToClose(s, logger, WARNING);
 			throw e;
 		} catch (NullPointerException e) {
 			// BluetoothSocket#connect() may throw an NPE under unknown
 			// circumstances
-			IoUtils.tryToClose(s, LOG, WARNING);
+			IoUtils.tryToClose(s, logger, WARNING);
 			throw new IOException(e);
 		}
 	}
@@ -185,7 +174,7 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 	public DuplexTransportConnection discoverAndConnect(String uuid) {
 		if (adapter == null) return null;
 		if (!discoverSemaphore.tryAcquire()) {
-			LOG.info("Discover already running");
+			logger.info("Discover already running");
 			return null;
 		}
 		try {
@@ -195,19 +184,19 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 					break;
 				}
 				try {
-					if (LOG.isLoggable(INFO))
-						LOG.info("Connecting to " + scrubMacAddress(address));
+					if (logger.isLoggable(INFO))
+						logger.info("Connecting to " + scrubMacAddress(address));
 					return connectTo(address, uuid);
 				} catch (IOException e) {
-					if (LOG.isLoggable(INFO)) {
-						LOG.info("Could not connect to " + scrubMacAddress(address));
+					if (logger.isLoggable(INFO)) {
+						logger.info("Could not connect to " + scrubMacAddress(address));
 					}
 				}
 			}
 		} finally {
 			discoverSemaphore.release();
 		}
-		LOG.info("Could not connect to any devices");
+		logger.info("Could not connect to any devices");
 		return null;
 	}
 
@@ -235,17 +224,17 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 					if (i == null) break;
 					String action = i.getAction();
 					if (ACTION_DISCOVERY_STARTED.equals(action)) {
-						LOG.info("Discovery started");
+						logger.info("Discovery started");
 					} else if (ACTION_DISCOVERY_FINISHED.equals(action)) {
-						LOG.info("Discovery finished");
+						logger.info("Discovery finished");
 						break;
 					} else if (ACTION_FOUND.equals(action)) {
 						BluetoothDevice d = i.getParcelableExtra(EXTRA_DEVICE);
 						// Ignore Bluetooth LE devices
-						if (SDK_INT < 18 || d.getType() != DEVICE_TYPE_LE) {
+						if (d.getType() != DEVICE_TYPE_LE) {
 							String address = d.getAddress();
-							if (LOG.isLoggable(INFO))
-								LOG.info("Discovered " +
+							if (logger.isLoggable(INFO))
+								logger.info("Discovered " +
 										scrubMacAddress(address));
 							if (!addresses.contains(address))
 								addresses.add(address);
@@ -254,13 +243,13 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 					now = clock.currentTimeMillis();
 				}
 			} else {
-				LOG.info("Could not start discovery");
+				logger.info("Could not start discovery");
 			}
 		} catch (InterruptedException e) {
-			LOG.info("Interrupted while discovering devices");
+			logger.info("Interrupted while discovering devices");
 			Thread.currentThread().interrupt();
 		} finally {
-			LOG.info("Cancelling discovery");
+			logger.info("Cancelling discovery");
 			adapter.cancelDiscovery();
 			app.unregisterReceiver(receiver);
 		}
@@ -278,11 +267,11 @@ public class AndroidBluetoothPlugin extends AbstractBluetoothPlugin<BluetoothSoc
 			else if (state == STATE_OFF) onAdapterDisabled();
 			int scanMode = intent.getIntExtra(EXTRA_SCAN_MODE, 0);
 			if (scanMode == SCAN_MODE_NONE) {
-				LOG.info("Scan mode: None");
+				logger.info("Scan mode: None");
 			} else if (scanMode == SCAN_MODE_CONNECTABLE) {
-				LOG.info("Scan mode: Connectable");
+				logger.info("Scan mode: Connectable");
 			} else if (scanMode == SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
-				LOG.info("Scan mode: Discoverable");
+				logger.info("Scan mode: Discoverable");
 			}
 		}
 	}

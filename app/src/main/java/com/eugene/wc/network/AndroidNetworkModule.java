@@ -21,7 +21,6 @@ public class AndroidNetworkModule {
 	@Singleton
 	NetworkManager provideNetworkManager(LifecycleManager lifecycleManager,
 										 AndroidNetworkManager networkManager) {
-		System.out.println("PROVIDING INSTANCE OF NETWORK MANAGER...");
 		lifecycleManager.registerService(networkManager);
 		return networkManager;
 	}

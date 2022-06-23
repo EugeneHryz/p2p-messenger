@@ -10,15 +10,13 @@ import com.eugene.wc.protocol.plugin.bluetooth.BluetoothConnectionLimiter;
 
 import java.io.IOException;
 
-class AndroidBluetoothConnectionFactory implements BluetoothConnectionFactory<BluetoothSocket> {
+public class AndroidBluetoothConnectionFactory implements BluetoothConnectionFactory<BluetoothSocket> {
 
 	private final BluetoothConnectionLimiter connectionLimiter;
 	private final AndroidWakeLockManager wakeLockManager;
-//	private final TimeoutMonitor timeoutMonitor;
 
-	AndroidBluetoothConnectionFactory(
-			BluetoothConnectionLimiter connectionLimiter,
-			AndroidWakeLockManager wakeLockManager) {
+	public AndroidBluetoothConnectionFactory(BluetoothConnectionLimiter connectionLimiter,
+											 AndroidWakeLockManager wakeLockManager) {
 		this.connectionLimiter = connectionLimiter;
 		this.wakeLockManager = wakeLockManager;
 	}

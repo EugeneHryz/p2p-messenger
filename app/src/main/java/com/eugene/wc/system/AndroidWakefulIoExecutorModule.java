@@ -16,7 +16,6 @@ public class AndroidWakefulIoExecutorModule {
 	@WakefulIoExecutor
 	Executor provideWakefulIoExecutor(@IoExecutor Executor ioExecutor,
 			AndroidWakeLockManager wakeLockManager) {
-		return r -> wakeLockManager.executeWakefully(r, ioExecutor,
-				"WakefulIoExecutor");
+		return r -> wakeLockManager.executeWakefully(r, ioExecutor, "WakefulIoExecutor");
 	}
 }

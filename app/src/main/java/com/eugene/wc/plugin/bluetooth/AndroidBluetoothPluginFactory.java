@@ -8,7 +8,6 @@ import android.bluetooth.BluetoothSocket;
 import com.eugene.wc.protocol.api.event.EventBus;
 import com.eugene.wc.protocol.api.io.IoExecutor;
 import com.eugene.wc.protocol.api.plugin.Backoff;
-import com.eugene.wc.protocol.api.plugin.BackoffFactory;
 import com.eugene.wc.protocol.api.plugin.PluginCallback;
 import com.eugene.wc.protocol.api.plugin.TransportId;
 import com.eugene.wc.protocol.api.plugin.duplex.DuplexPlugin;
@@ -17,6 +16,7 @@ import com.eugene.wc.protocol.api.system.AndroidExecutor;
 import com.eugene.wc.protocol.api.system.AndroidWakeLockManager;
 import com.eugene.wc.protocol.api.system.Clock;
 import com.eugene.wc.protocol.api.system.WakefulIoExecutor;
+import com.eugene.wc.protocol.plugin.BackoffImpl;
 import com.eugene.wc.protocol.plugin.bluetooth.BluetoothConnectionFactory;
 import com.eugene.wc.protocol.plugin.bluetooth.BluetoothConnectionLimiter;
 import com.eugene.wc.protocol.plugin.bluetooth.BluetoothConnectionLimiterImpl;
@@ -41,19 +41,15 @@ public class AndroidBluetoothPluginFactory implements DuplexPluginFactory {
 	private final SecureRandom secureRandom;
 	private final EventBus eventBus;
 	private final Clock clock;
-//	private final TimeoutMonitor timeoutMonitor;
-	private final BackoffFactory backoffFactory;
 
 	@Inject
-    AndroidBluetoothPluginFactory(@IoExecutor Executor ioExecutor,
+    public AndroidBluetoothPluginFactory(@IoExecutor Executor ioExecutor,
                                   @WakefulIoExecutor Executor wakefulIoExecutor,
                                   AndroidExecutor androidExecutor,
                                   AndroidWakeLockManager wakeLockManager,
                                   Application app,
                                   EventBus eventBus,
-                                  Clock clock,
-//                                  TimeoutMonitor timeoutMonitor,
-                                  BackoffFactory backoffFactory) {
+                                  Clock clock) {
 		this.ioExecutor = ioExecutor;
 		this.wakefulIoExecutor = wakefulIoExecutor;
 		this.androidExecutor = androidExecutor;
@@ -62,8 +58,6 @@ public class AndroidBluetoothPluginFactory implements DuplexPluginFactory {
 		this.secureRandom = new SecureRandom();
 		this.eventBus = eventBus;
 		this.clock = clock;
-//		this.timeoutMonitor = timeoutMonitor;
-		this.backoffFactory = backoffFactory;
 	}
 
 	@Override
@@ -78,13 +72,10 @@ public class AndroidBluetoothPluginFactory implements DuplexPluginFactory {
 
 	@Override
 	public DuplexPlugin createPlugin(PluginCallback callback) {
-		BluetoothConnectionLimiter connectionLimiter =
-				new BluetoothConnectionLimiterImpl(eventBus);
+		BluetoothConnectionLimiter connectionLimiter = new BluetoothConnectionLimiterImpl(eventBus);
 		BluetoothConnectionFactory<BluetoothSocket> connectionFactory =
-				new AndroidBluetoothConnectionFactory(connectionLimiter,
-						wakeLockManager);
-		Backoff backoff = backoffFactory.createBackoff(MIN_POLLING_INTERVAL,
-				MAX_POLLING_INTERVAL, BACKOFF_BASE);
+				new AndroidBluetoothConnectionFactory(connectionLimiter, wakeLockManager);
+		Backoff backoff = new BackoffImpl(MIN_POLLING_INTERVAL, MAX_POLLING_INTERVAL, BACKOFF_BASE);
 		AndroidBluetoothPlugin plugin = new AndroidBluetoothPlugin(
 				connectionLimiter, connectionFactory, ioExecutor,
 				wakefulIoExecutor, secureRandom, androidExecutor, app,

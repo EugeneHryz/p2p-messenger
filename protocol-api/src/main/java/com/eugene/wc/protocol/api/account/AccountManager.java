@@ -3,7 +3,6 @@ package com.eugene.wc.protocol.api.account;
 import com.eugene.wc.protocol.api.crypto.SecretKey;
 import com.eugene.wc.protocol.api.crypto.exception.CryptoException;
 import com.eugene.wc.protocol.api.crypto.exception.DecryptionException;
-import com.eugene.wc.protocol.api.crypto.exception.EncryptionException;
 
 public interface AccountManager {
 

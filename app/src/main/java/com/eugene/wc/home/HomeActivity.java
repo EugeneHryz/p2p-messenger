@@ -82,17 +82,6 @@ public class HomeActivity extends BaseActivity {
         showInitialFragment(new ContactListFragment());
     }
 
-    private Toolbar setupToolbar() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.setDisplayHomeAsUpEnabled(true);
-            actionBar.setDisplayShowHomeEnabled(true);
-        }
-        return toolbar;
-    }
-
     private void initializeTransports() {
         transports = new ArrayList<>();
         transports.add(createTransport(BluetoothConstants.ID));
@@ -121,6 +110,17 @@ public class HomeActivity extends BaseActivity {
             transport.setIconColorId(getIconColor(newState));
             transportsAdapter.notifyDataSetChanged();
         }
+    }
+
+    private Toolbar setupToolbar() {
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+            actionBar.setDisplayShowHomeEnabled(true);
+        }
+        return toolbar;
     }
 
     private Transport createTransport(TransportId id) {
